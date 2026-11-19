@@ -16,7 +16,7 @@ export const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
     sender: 'ai',
     senderName: 'Umbrella AI Assistant',
     timestamp: getCurrentWIB(),
-    text: `Halo! Saya **Umbrella AI Assistant**, asisten virtual terpadu Rumah Sakit PT Umbrella Corp didukung oleh **Google Gemini**.\n\nAda yang dapat kami bantu terkait jadwal praktik dokter spesialis, ketersediaan kamar rawat inap, atau alur penanganan darurat IGD hari ini?\n\nSilakan pilih salah satu contoh pertanyaan cepat di bawah atau ketikkan pertanyaan Anda secara langsung.`,
+    text: `Halo! Saya **Umbrella AI Assistant**, asisten virtual terpadu Rumah Sakit PT Umbrella Corp didukung oleh **DeepSeek AI**.\n\nAda yang dapat kami bantu terkait jadwal praktik dokter spesialis, ketersediaan kamar rawat inap, atau alur penanganan darurat IGD hari ini?\n\nSilakan pilih salah satu contoh pertanyaan cepat di bawah atau ketikkan pertanyaan Anda secara langsung.`,
     quickReplies: [
       { id: 'qr-poli', label: 'Jadwal Poliklinik', icon: 'grid', actionType: 'prompt', payload: 'Berapa jadwal buka poliklinik spesialis dan kuota pendaftaran hari ini?' },
       { id: 'qr-doc', label: 'Jadwal Dokter', icon: 'calendar', actionType: 'prompt', payload: 'Tampilkan jadwal dokter spesialis anak dan penyakit dalam hari ini.' },
