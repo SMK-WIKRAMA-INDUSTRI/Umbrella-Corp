@@ -1,6 +1,6 @@
 import { ChatMessage, ActionPill } from '../types';
 import { HOSPITAL_METADATA } from '../data/hospitalData';
-import { callGeminiAPI, DEFAULT_GEMINI_API_KEY } from './geminiService';
+import { callGeminiAPI } from './geminiService';
 
 export const getCurrentWIB = (): string => {
   const now = new Date();
@@ -29,7 +29,7 @@ export const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
 export async function generateAIResponse(
   userText: string,
   chatHistory: ChatMessage[] = [],
-  apiKey: string = DEFAULT_GEMINI_API_KEY
+  apiKey: string = ''
 ): Promise<ChatMessage> {
   const timestamp = getCurrentWIB();
   const lower = userText.toLowerCase();

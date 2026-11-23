@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { UmbrellaLogo } from './UmbrellaLogo';
 import { AnimeBackground } from './AnimeBackground';
-import doctorImg from '../assets/doctors-duo.png';
+import doctorImg from '../assets/doctors-duo.webp';
 import { INITIAL_DOCTORS, INSURANCE_PARTNERS, HOSPITAL_METADATA } from '../data/hospitalData';
 
 interface LandingPageProps {

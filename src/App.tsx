@@ -4,7 +4,6 @@ import { PlaygroundHeader } from './components/PlaygroundHeader';
 import { ChatPlayground, ChatItem } from './components/ChatPlayground';
 import { TutorialModal } from './components/TutorialModal';
 import {
-  DEFAULT_GEMINI_API_KEY,
   DEFAULT_GEMINI_MODEL,
   DEFAULT_HOSPITAL_CONTEXT,
   callGeminiLive,
@@ -57,7 +56,6 @@ export const App: React.FC = () => {
       const aiText = await callGeminiLive({
         userQuery: queryText,
         chatHistory: historyForAPI,
-        apiKey: DEFAULT_GEMINI_API_KEY,
         model: DEFAULT_GEMINI_MODEL,
         systemContext: DEFAULT_HOSPITAL_CONTEXT,
       });
