@@ -43,7 +43,9 @@ const OPENROUTER_API_KEY =
 const GEMINI_API_KEY =
   process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || "";
 const DEEPGRAM_API_KEY =
-  process.env.DEEPGRAM_API_KEY || process.env.VITE_DEEPGRAM_API_KEY || "60a13af1a04287bdd70caf432f6b6b76ccbcbbc5";
+  process.env.DEEPGRAM_API_KEY ||
+  process.env.VITE_DEEPGRAM_API_KEY ||
+  "60a13af1a04287bdd70caf432f6b6b76ccbcbbc5";
 
 // 2. Sliding Window Rate Limiter (Protects against Denial of Service / Denial of Wallet)
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
@@ -153,14 +155,12 @@ function checkInstantKnowledgeCache(query) {
   return null;
 }
 
-// 5. Secure AI Dispatcher with AbortController Timeout (Maximum 8 seconds)
-async function requestAICompletion(userQuery, chatHistory = []) {
-  // Step 1: Check instant cache first
-  const cachedResponse = checkInstantKnowledgeCache(userQuery);
-  if (cachedResponse) {
-    return { text: cachedResponse, source: "cache" };
-  }
-
+// 5. Secure AI Dispatcher with AbortController Timeout (Always Route to Real AI)
+async function requestAICompletion(
+  userQuery,
+  chatHistory = [],
+  clientApiKey = "",
+) {
   const systemPrompt = `IDENTITAS RESMI:
 Anda adalah "Umbrella AI Assistant", sistem asisten kecerdasan buatan resmi Rumah Sakit PT Umbrella Corp (RS Umbrella Care & Advanced Diagnostic Center).
 
@@ -271,9 +271,63 @@ ATURAN FORMAT JAWABAN:
     }
   }
 
+  // 3. Coba Google Gemini API jika GEMINI_API_KEY atau kunci AIza tersedia
+  const geminiKey =
+    (clientApiKey.startsWith("AIza") ? clientApiKey : "") ||
+    (GEMINI_API_KEY && !GEMINI_API_KEY.includes("your_") ? GEMINI_API_KEY : "");
+
+  if (geminiKey) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+      const geminiModel = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+      const contents = [
+        ...chatHistory.slice(-6).map((msg) => ({
+          role:
+            msg.role === "assistant" || msg.role === "model" ? "model" : "user",
+          parts: [{ text: String(msg.text || "").slice(0, 500) }],
+        })),
+        { role: "user", parts: [{ text: userQuery }] },
+      ];
+
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`,
+        {
+          method: "POST",
+          signal: controller.signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents,
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            generationConfig: { temperature: 0.3, maxOutputTokens: 1000 },
+          }),
+        },
+      );
+
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) return { text: text.trim(), source: "gemini" };
+      } else {
+        const errText = await res.text();
+        console.warn(`Gemini API error (${res.status}):`, errText);
+      }
+    } catch (err) {
+      console.warn("Gemini upstream error:", err.message);
+    }
+  }
+
   // Graceful Fallback if APIs are offline or unconfigured
   return {
-    text: `Terima kasih telah menghubungi **Umbrella AI Assistant**.\n\nBerdasarkan panduan resmi RS PT Umbrella Corp:\n- **Layanan IGD 24 Jam:** Hotline **(021) 8065-9911** / Ambulans **119**.\n- **Kamar Rawat Inap VIP:** Paviliun Aster (Tersedia 4 Bed) & Paviliun Melati (Tersedia 2 Bed) dengan tarif **Rp 1.650.000 / malam**.\n- **Poliklinik Spesialis:** Buka Senin - Sabtu pukul 08:00 - 21:00 WIB.\n- **Call Center & Pendaftaran:** **(021) 8065-0000**.\n\nAda informasi spesifik lainnya seputar dokter spesialis atau penjaminan BPJS yang ingin Anda tanyakan?`,
+    text: `⚠️ **KUNCI API LLM DIPERLUKAN**: Agar asisten AI dapat menjawab secara live dan cerdas menggunakan data resmi RS Umbrella, mohon masukkan kunci API AI ke file **.env**:
+
+1. **Google Gemini API Key** (Format: \`AIzaSy...\`)
+2. **DeepSeek API Key** (Format: \`sk-...\`)
+3. **OpenRouter API Key** (Format: \`sk-or-v1-...\`)
+
+*Catatan: Kunci API yang Anda masukkan sebelumnya (\`60a13af1a042...\`) adalah kunci **Deepgram** yang digunakan khusus untuk fitur **Speech-to-Text (suara ke teks)**, bukan untuk model pembuat teks (LLM).*`,
     source: "fallback-system",
   };
 }
@@ -390,7 +444,11 @@ const server = http.createServer(async (req, res) => {
         }
 
         // 3. Process with Secure AI Dispatcher
-        const result = await requestAICompletion(userQuery, chatHistory);
+        const result = await requestAICompletion(
+          userQuery,
+          chatHistory,
+          payload.apiKey,
+        );
 
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(
@@ -421,7 +479,8 @@ const server = http.createServer(async (req, res) => {
       res.end(
         JSON.stringify({
           error: "RATE_LIMIT_EXCEEDED",
-          message: "Batas frekuensi transkripsi audio tercapai. Mohon tunggu sejenak.",
+          message:
+            "Batas frekuensi transkripsi audio tercapai. Mohon tunggu sejenak.",
         }),
       );
       return;
@@ -468,7 +527,9 @@ const server = http.createServer(async (req, res) => {
         if (!dgResponse.ok) {
           const dgErr = await dgResponse.text();
           console.warn(`Deepgram status (${dgResponse.status}):`, dgErr);
-          res.writeHead(dgResponse.status, { "Content-Type": "application/json" });
+          res.writeHead(dgResponse.status, {
+            "Content-Type": "application/json",
+          });
           res.end(
             JSON.stringify({
               error: "Deepgram error",

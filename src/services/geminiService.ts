@@ -91,7 +91,38 @@ export async function callOpenRouterLive({
   if (directKey) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+      // Support Google Gemini Direct jika key berawalan AIza
+      if (directKey.startsWith('AIza')) {
+        const geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${directKey}`,
+          {
+            method: 'POST',
+            signal: controller.signal,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                ...chatHistory.slice(-6).map((m) => ({
+                  role: m.role === 'model' || m.role === 'assistant' ? 'model' : 'user',
+                  parts: [{ text: m.text }],
+                })),
+                { role: 'user', parts: [{ text: trimmedQuery }] },
+              ],
+              systemInstruction: {
+                parts: [{ text: `Anda adalah Umbrella AI Assistant resmi RS PT Umbrella Corp.\nData Panduan Resmi:\n${systemContext}` }],
+              },
+              generationConfig: { temperature: 0.3, maxOutputTokens: 1000 },
+            }),
+          }
+        );
+        clearTimeout(timeoutId);
+        if (geminiRes.ok) {
+          const gData = await geminiRes.json();
+          const gText = gData.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (gText) return gText.trim();
+        }
+      }
 
       const endpoint = directKey.startsWith('sk-or-v1-')
         ? 'https://openrouter.ai/api/v1/chat/completions'
@@ -141,8 +172,8 @@ export async function callOpenRouterLive({
     }
   }
 
-  // 3. Respon Operasional Terstandarisasi Otomatis (Fail-Safe Response)
-  return `Terima kasih telah menghubungi **Umbrella AI Assistant** RS PT Umbrella Corp.\n\n- **Kamar Rawat Inap VIP:** Paviliun Aster (Tersedia 4 Bed) & Paviliun Melati (Tersedia 2 Bed) tarif **Rp 1.650.000 / malam**.\n- **Layanan Gawat Darurat 24 Jam:** Hotline IGD **(021) 8065-9911** atau Ambulans Darurat **119** (Bebas rujukan BPJS untuk kedaruratan).\n- **Pusat Informasi & Jadwal Dokter:** Hubungi Call Center di **(021) 8065-0000**.\n\nSilakan pilih topik bantuan cepat di atas atau ajukan pertanyaan spesifik terkait layanan rumah sakit kami.`;
+  // Don't present generic hospital information as if it answered the user's question.
+  return '⚠️ Maaf, layanan AI belum dapat memproses pertanyaan ini. Jawaban generik tidak ditampilkan agar tidak menyesatkan. Silakan coba lagi beberapa saat atau hubungi Call Center RS di **(021) 8065-0000**.';
 }
 
 // Alias fungsi untuk kompatibilitas
