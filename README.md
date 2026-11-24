@@ -1,11 +1,4 @@
-<<<<<<< HEAD
 # PT Umbrella Corp - Umbrella Healthcare Portal & AI Assistant
-=======
-List fitur :
-Front end  = Dimas iqbal
-backend security = ihsan 
-fix copas output = dyaza
->>>>>>> 6b98c67 (menghilangkan tanda bintang, pagar, dll saat di copy-paste)
 
 Portal Layanan Terpadu Rumah Sakit PT Umbrella Corp dilengkapi Asisten AI Medis Cerdas, Ketersediaan Kamar Rawat Inap VIP, Pendaftaran Poliklinik Spesialis, dan Alur Gawat Darurat IGD 24 Jam.
 
@@ -16,6 +9,7 @@ Portal Layanan Terpadu Rumah Sakit PT Umbrella Corp dilengkapi Asisten AI Medis 
 - **Backend Security & Architecture:** Ihsan
 - **Fix Copas Output & UI Polish:** Dyza
 - **Respon AI & Text-to-Speech:** Prasgos, Hifzhi
+- **Speech-to-Text (STT) Deepgram Integration:** Ahmad Rhezki Prasetya & Umbrella AI Team
 
 ---
 
@@ -41,6 +35,7 @@ Isi kunci API Anda di dalam file `.env` (disimpan aman di server):
 PORT=5000
 DEEPSEEK_API_KEY=your_deepseek_api_key_here
 OPENROUTER_API_KEY=your_openrouter_api_key_here
+DEEPGRAM_API_KEY=your_deepgram_api_key_here
 ```
 
 ### 2. Mode Pengembangan (Development)
