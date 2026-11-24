@@ -9,6 +9,31 @@ export const getCurrentWIB = (): string => {
   return `${hours}:${minutes} WIB`;
 };
 
+/**
+ * Membersihkan sintaks Markdown (seperti #, ##, ###, **, *, _)
+ * agar teks menjadi plain text yang rapi saat disalin atau ditempel.
+ */
+export const stripMarkdown = (text: string): string => {
+  return text
+    // Hapus header markdown di awal baris: #, ##, ###, dst.
+    .replace(/^#{1,6}\s+/gm, '')
+    // Hapus tanda blockquote di awal baris: >
+    .replace(/^>\s*/gm, '')
+    // Ubah bullet list asterik (* ) di awal baris menjadi strip biasa (- )
+    .replace(/^\*\s+/gm, '- ')
+    // Hapus format bold & italic bertingkat: ***teks***, **teks**, *teks*
+    .replace(/\*\*\*(.*?)\*\*\*/g, '$1')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    // Hapus format underscore: ___teks___, __teks__, _teks_
+    .replace(/___(.*?)___/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    .replace(/_(.*?)_/g, '$1')
+    // Hapus backticks: `code`
+    .replace(/`([^`]+)`/g, '$1')
+    .trim();
+};
+
 // INITIAL WELCOME STATE (Bahasa Indonesia)
 export const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
   {

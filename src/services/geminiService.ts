@@ -71,8 +71,65 @@ export async function callOpenRouterLive({
 
     clearTimeout(timeoutId);
 
+<<<<<<< HEAD
     if (response.status === 429) {
       return '⚠️ **BATAS FREKUENSI TERCAPAI**: Mohon tunggu sejenak sebelum mengirim pertanyaan berikutnya untuk menjaga kestabilan sistem RS.';
+=======
+SUMBER DATA RESMI RUMAH SAKIT (ACUAN UTAMA):
+${systemContext}
+
+ATURAN FORMAT JAWABAN:
+- Gunakan Bahasa Indonesia sepenuhnya.
+- Format rapi: gunakan huruf tebal (**teks penting**) untuk nama dokter, poli, tarif, dan nomor telepon. Hindari penggunaan tanda pagar (seperti ### atau ##) pada judul, cukup gunakan baris baru atau teks tebal agar tidak mengotori teks saat dicopy.
+- Gunakan poin daftar (bullet points) untuk memudahkan pembacaan cepat.
+- Jika ada hal yang belum tercatat di data konteks, sampaikan dengan transparan bahwa sistem AI belum memiliki data tersebut dan sarankan menghubungi Pusat Informasi RS di 021-8065-0000.`;
+
+  // Format riwayat pesan untuk OpenAI / DeepSeek format
+  const messagesPayload: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+    {
+      role: 'system',
+      content: systemInstructionText,
+    },
+    ...chatHistory.slice(-8).map((msg) => ({
+      role: msg.role === 'model' || msg.role === 'assistant' ? ('assistant' as const) : ('user' as const),
+      content: msg.text,
+    })),
+    {
+      role: 'user',
+      content: userQuery,
+    },
+  ];
+
+  // 1. Jika API key ditujukan untuk DeepSeek Official (bukan sk-or-v1-), coba panggil DeepSeek Official API
+  if (!cleanKey.startsWith('sk-or-v1-')) {
+    try {
+      const dsResponse = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${cleanKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: messagesPayload,
+          max_tokens: 1000,
+          temperature: 0.3,
+        }),
+      });
+
+      if (dsResponse.ok) {
+        const dsData = await dsResponse.json();
+        const dsContent = dsData.choices?.[0]?.message?.content;
+        if (dsContent && typeof dsContent === 'string') {
+          return dsContent.trim();
+        }
+      } else {
+        const dsErr = await dsResponse.text();
+        console.warn(`DeepSeek direct endpoint (${dsResponse.status}):`, dsErr);
+      }
+    } catch (dsErr) {
+      console.warn('DeepSeek direct network exception:', dsErr);
+>>>>>>> 6b98c67 (menghilangkan tanda bintang, pagar, dll saat di copy-paste)
     }
 
     if (response.ok) {

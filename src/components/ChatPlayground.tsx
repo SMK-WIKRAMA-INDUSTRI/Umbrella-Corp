@@ -28,6 +28,7 @@ import {
   Info,
 } from 'lucide-react';
 import { UmbrellaLogo } from './UmbrellaLogo';
+import { stripMarkdown } from '../services/chatEngine';
 
 export interface ChatItem {
   id: string;
@@ -101,9 +102,40 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
   };
 
   const handleCopyText = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
+    // Bersihkan format markdown (seperti **, *, ###, #, dll) saat disalin ke clipboard
+    const cleanText = stripMarkdown(text);
+    navigator.clipboard.writeText(cleanText);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2500);
+  };
+
+  // Handler paste untuk mencegah tanda bintang (*) dan pagar (#) masuk ke input box
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pasteData = e.clipboardData.getData('text');
+    if (!pasteData) return;
+
+    // Jika teks yang ditempel mengandung karakter format markdown (*, **, #, >)
+    if (/(\*\*|\*|#{1,6}\s+|^>\s+)/m.test(pasteData)) {
+      e.preventDefault();
+      const cleaned = stripMarkdown(pasteData);
+
+      const target = e.currentTarget;
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+      const currentVal = target.value;
+      const nextVal = currentVal.substring(0, start) + cleaned + currentVal.substring(end);
+
+      setInputText(nextVal);
+
+      // Sesuaikan tinggi textarea dan posisi kursor
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + cleaned.length;
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 140)}px`;
+        }
+      }, 0);
+    }
   };
 
   const handleRate = (id: string, type: 'up' | 'down') => {
@@ -186,13 +218,32 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
   // Helper format teks dengan highlight medis cerdas & nomor telepon interaktif
   const renderFormattedText = (text: string) => {
     const lines = text.split('\n');
-    return lines.map((line, lineIdx) => {
-      // Deteksi bullet point
-      const isBullet = line.trim().startsWith('•') || line.trim().startsWith('-');
-      const cleanLine = isBullet ? line.replace(/^[\s•-]+/, '').trim() : line;
+    return lines.map((rawLine, lineIdx) => {
+      let line = rawLine;
 
-      // Split bold formatting (**teks**)
-      const parts = cleanLine.split(/(\*\*.*?\*\*)/g);
+      // 1. Deteksi dan hilangkan Header Markdown (#, ##, ###, dst.) agar tidak muncul tanda pagar di layar
+      const headerMatch = line.match(/^(#{1,6})\s+(.*)$/);
+      let isHeader = false;
+      let headerLevel = 0;
+      if (headerMatch) {
+        isHeader = true;
+        headerLevel = headerMatch[1].length;
+        line = headerMatch[2]; // Hilangkan tanda '#'
+      }
+
+      // 2. Deteksi Blockquote (>)
+      let isQuote = false;
+      if (line.trim().startsWith('>')) {
+        isQuote = true;
+        line = line.replace(/^>\s*/, '');
+      }
+
+      // 3. Deteksi bullet point (termasuk •, -, atau *)
+      const isBullet = line.trim().startsWith('•') || line.trim().startsWith('-') || line.trim().startsWith('* ');
+      const cleanLine = isBullet ? line.replace(/^[\s•*-]+/, '').trim() : line;
+
+      // 4. Split formatting: Bold (**teks**) dan Italic (*teks*)
+      const parts = cleanLine.split(/(\*\*.*?\*\*|\*.*?\*)/g);
       const formattedParts = parts.map((part, partIdx) => {
         if (part.startsWith('**') && part.endsWith('**')) {
           const content = part.slice(2, -2);
@@ -214,6 +265,14 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
           );
         }
 
+        if (part.startsWith('*') && part.endsWith('*')) {
+          return (
+            <em key={partIdx} className="italic text-slate-700">
+              {part.slice(1, -1)}
+            </em>
+          );
+        }
+
         // Cek jika ada nomor telepon di teks biasa
         if (part.includes('021-8065-9911')) {
           return (
@@ -229,6 +288,30 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
 
         return part;
       });
+
+      if (isHeader) {
+        return (
+          <div
+            key={lineIdx}
+            className={`font-bold text-slate-900 ${
+              headerLevel <= 2 ? 'text-base sm:text-lg mt-3.5 mb-1.5' : 'text-sm sm:text-base mt-2.5 mb-1'
+            }`}
+          >
+            {formattedParts}
+          </div>
+        );
+      }
+
+      if (isQuote) {
+        return (
+          <div
+            key={lineIdx}
+            className="my-2 pl-3 border-l-2 border-[#E11D48] bg-rose-50/50 py-1 rounded-r text-slate-700 italic"
+          >
+            {formattedParts}
+          </div>
+        );
+      }
 
       if (isBullet) {
         return (
@@ -607,6 +690,7 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
               value={inputText}
               onChange={handleTextareaInput}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               placeholder="Tanyakan keluhan, jadwal dokter spesialis, kamar VIP, atau alur BPJS..."
               className={`w-full py-2 pl-3 pr-20 bg-transparent focus:outline-none resize-none leading-relaxed placeholder:text-slate-400 text-slate-800 transition-all ${seniorMode ? 'text-base' : 'text-xs sm:text-sm'
                 }`}

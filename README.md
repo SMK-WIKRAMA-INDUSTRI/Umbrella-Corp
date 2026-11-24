@@ -1,4 +1,11 @@
+<<<<<<< HEAD
 # PT Umbrella Corp - Umbrella Healthcare Portal & AI Assistant
+=======
+List fitur :
+Front end  = Dimas iqbal
+backend security = ihsan 
+fix copas output = dyaza
+>>>>>>> 6b98c67 (menghilangkan tanda bintang, pagar, dll saat di copy-paste)
 
 Portal Layanan Terpadu Rumah Sakit PT Umbrella Corp dilengkapi Asisten AI Medis Cerdas, Ketersediaan Kamar Rawat Inap VIP, Pendaftaran Poliklinik Spesialis, dan Alur Gawat Darurat IGD 24 Jam.
 

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Paperclip, ShieldCheck, Play, ArrowRight, CornerDownLeft, Sparkles, Mic, MicOff } from 'lucide-react';
 import { ActionPill } from '../types';
+import { stripMarkdown } from '../services/chatEngine';
 
 interface InputDockProps {
   onSendMessage: (text: string) => void;
@@ -47,6 +48,32 @@ export const InputDock: React.FC<InputDockProps> = ({
     }
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pasteData = e.clipboardData.getData('text');
+    if (!pasteData) return;
+
+    if (/(\*\*|\*|#{1,6}\s+|^>\s+)/m.test(pasteData)) {
+      e.preventDefault();
+      const cleaned = stripMarkdown(pasteData);
+
+      const target = e.currentTarget;
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+      const currentVal = target.value;
+      const nextVal = currentVal.substring(0, start) + cleaned + currentVal.substring(end);
+
+      setInputText(nextVal);
+
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + cleaned.length;
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 140)}px`;
+        }
+      }, 0);
+    }
+  };
+
   // Simulated Speech-to-Text for accessibility
   const toggleSpeechRecognition = () => {
     if (!isListening) {
@@ -90,6 +117,7 @@ export const InputDock: React.FC<InputDockProps> = ({
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder={
               seniorMode
                 ? "Ketik pertanyaan Anda di sini... (atau tekan ikon mikrofon)"
