@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { animate } from 'animejs';
 import { BookOpen, Clock, X, Menu, Phone } from 'lucide-react';
+import { MedicalRecordsModal } from './MedicalRecordsModal';
+import { LocationMapModal } from './LocationMapModal';
 import { UmbrellaLogo } from './UmbrellaLogo';
 
 interface PlaygroundHeaderProps {
@@ -16,6 +18,8 @@ export const PlaygroundHeader: React.FC<PlaygroundHeaderProps> = ({
 }) => {
   // State modal untuk fitur yang berstatus "Coming Soon"
   const [comingSoonFeature, setComingSoonFeature] = useState<{ title: string; desc: string } | null>(null);
+  const [medicalOpen, setMedicalOpen] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
 
   // State menu navigasi seluler (Hamburger menu untuk layar HP & Tablet)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -119,20 +123,12 @@ export const PlaygroundHeader: React.FC<PlaygroundHeaderProps> = ({
     {
       id: 'rekam-medis',
       label: 'Rekam Medis',
-      onClick: () =>
-        setComingSoonFeature({
-          title: 'Rekam Medis Digital & Laboratorium',
-          desc: 'Portal akses riwayat pemeriksaan, diagnosa dokter, dan hasil laboratorium mandiri sedang dalam tahap standarisasi SIMRS.',
-        }),
+      onClick: () => setMedicalOpen(true),
     },
     {
       id: 'peta-lokasi',
       label: 'Peta Lokasi',
-      onClick: () =>
-        setComingSoonFeature({
-          title: 'Peta Fasilitas & Jaringan Faskes',
-          desc: 'Peta interaktif navigasi ruangan rumah sakit serta jaringan klinik RS Umbrella sedang dalam pengembangan.',
-        }),
+      onClick: () => setLocationOpen(true),
     },
   ];
 
@@ -430,6 +426,8 @@ export const PlaygroundHeader: React.FC<PlaygroundHeaderProps> = ({
           </div>
         </div>
       )}
+      <MedicalRecordsModal isOpen={medicalOpen} onClose={() => setMedicalOpen(false)} />
+      <LocationMapModal isOpen={locationOpen} onClose={() => setLocationOpen(false)} />
     </>
   );
 };
