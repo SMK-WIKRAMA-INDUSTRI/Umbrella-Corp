@@ -264,16 +264,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
       isAnchor: true,
     },
     {
-      id: 'chatbot',
-      label: 'Chatbot AI',
-      onClick: () => handleLaunchAssistant(),
-    },
-    {
-      id: 'rekam-medis',
-      label: 'Rekam Medis',
-      onClick: () => setMedicalOpen(true),
-    },
-    {
       id: 'peta-lokasi',
       label: 'Peta Lokasi',
       onClick: () => setLocationOpen(true),

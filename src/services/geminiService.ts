@@ -1,23 +1,8 @@
 import { HOSPITAL_METADATA } from '../data/hospitalData';
 
-// API Key DeepSeek dari Guru / Pengguna
-export const DEFAULT_DEEPSEEK_API_KEY =
-  (import.meta.env.VITE_DEEPSEEK_API_KEY as string) ||
-  '';
-
-export const DEFAULT_DEEPSEEK_MODEL =
-  (import.meta.env.VITE_DEEPSEEK_MODEL as string) || 'deepseek-chat';
-
-// OpenRouter Engine (Mendukung DeepSeek-Chat dan Google Gemini)
-export const BACKUP_OPENROUTER_API_KEY =
-  (import.meta.env.VITE_OPENROUTER_API_KEY as string) ||
-  '';
-
-export const DEFAULT_OPENROUTER_API_KEY = DEFAULT_DEEPSEEK_API_KEY;
+// Konfigurasi Klien & Kompatibilitas
+export const DEFAULT_DEEPSEEK_MODEL = 'deepseek-chat';
 export const DEFAULT_OPENROUTER_MODEL = 'deepseek/deepseek-chat';
-
-// Alias kompatibilitas
-export const DEFAULT_GEMINI_API_KEY = DEFAULT_DEEPSEEK_API_KEY;
 export const DEFAULT_GEMINI_MODEL = 'deepseek-chat';
 
 export const DEFAULT_HOSPITAL_CONTEXT = `RS PT Umbrella Corp (RS Umbrella Care & Advanced Diagnostic Center) memiliki fasilitas rawat inap VIP (Paviliun Aster & Melati) dengan fasilitas Smart Monitor telemetri pasien, bed elektrik terpadu, kamar mandi dalam dengan pemanas air, dan sofa bed penunggu keluarga. Tarif kamar VIP: Rp 1.650.000 / malam (saat ini tersedia 4 Bed di Aster dan 2 Bed di Melati).
@@ -46,155 +31,127 @@ export interface GeminiCallOptions {
   systemContext?: string;
 }
 
+/**
+ * Panggilan Utama: Melalui Secure Backend Proxy (/api/chat)
+ * - Mencegah kebocoran API Key ke browser publik
+ * - Dilengkapi proteksi Rate Limiting & Fast Caching
+ * - Waktu timeout 10 detik dengan AbortController untuk mencegah server lag
+ */
 export async function callOpenRouterLive({
   userQuery,
   chatHistory = [],
-  apiKey = DEFAULT_DEEPSEEK_API_KEY,
+  apiKey = '',
   model = DEFAULT_OPENROUTER_MODEL,
   systemContext = DEFAULT_HOSPITAL_CONTEXT,
 }: GeminiCallOptions): Promise<string> {
-  const cleanKey = (apiKey || DEFAULT_DEEPSEEK_API_KEY).trim();
-
-  // Guard: Jika API key kosong
-  if (!cleanKey) {
-    throw new Error('API_KEY_MISSING: Kunci API AI belum terpasang.');
+  const trimmedQuery = userQuery.trim();
+  if (!trimmedQuery) {
+    throw new Error('Pertanyaan tidak boleh kosong.');
   }
 
-  // System Prompt: Identitas Resmi Asisten Rumah Sakit & Integritas Medis
-  const systemInstructionText = `IDENTITAS RESMI:
-Anda adalah "Umbrella AI Assistant", sistem asisten kecerdasan buatan resmi Rumah Sakit PT Umbrella Corp (RS Umbrella Care & Advanced Diagnostic Center).
+  // 1. Coba hubungi Secure Backend Proxy (/api/chat)
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s max timeout
 
-KEJUJURAN & TRANSPARANSI IDENTITAS:
-- Bersikaplah ramah, sopan, profesional, dan empatik.
-- Jelaskan informasi secara jelas, terstruktur, dan mudah dipahami pasien serta keluarganya.
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userQuery: trimmedQuery,
+        chatHistory: chatHistory.slice(-6).map((msg) => ({
+          role: msg.role === 'model' || msg.role === 'assistant' ? 'assistant' : 'user',
+          text: msg.text,
+        })),
+      }),
+    });
 
-HIMBAUAN KESELAMATAN MEDIS WAJIB:
-1. INFORMASI OPERASIONAL BUKAN DIAGNOSIS: Respon Anda bersifat informatif operasional dan administratif rumah sakit, BUKAN pengganti diagnosis medis resmi atau pemeriksaan fisik langsung oleh dokter.
-2. LARANGAN OBAT KERAS: Dilarang meresepkan antibiotik atau obat keras tanpa resep dokter resmi.
-3. KEDARURATAN MEDIS: Bila pengguna menyebutkan tanda bahaya/darurat (sesak napas akut, nyeri dada menusuk, kejang, hilang kesadaran, trauma fisik berat), ingatkan dengan tegas agar SEGERA menuju IGD 24 Jam RS Umbrella (Hotline: 021-8065-9911) atau hubungi ambulans darurat 119.
+    clearTimeout(timeoutId);
 
-SUMBER DATA RESMI RUMAH SAKIT (ACUAN UTAMA):
-${systemContext}
-
-ATURAN FORMAT JAWABAN:
-- Gunakan Bahasa Indonesia sepenuhnya.
-- Gunakan format Markdown rapi: gunakan huruf tebal (**teks penting**) untuk nama dokter, poli, tarif, dan nomor telepon.
-- Gunakan poin daftar (bullet points) untuk memudahkan pembacaan cepat.
-- Jika ada hal yang belum tercatat di data konteks, sampaikan dengan transparan bahwa sistem AI belum memiliki data tersebut dan sarankan menghubungi Pusat Informasi RS di 021-8065-0000.`;
-
-  // Format riwayat pesan untuk OpenAI / DeepSeek format
-  const messagesPayload: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-    {
-      role: 'system',
-      content: systemInstructionText,
-    },
-    ...chatHistory.slice(-8).map((msg) => ({
-      role: msg.role === 'model' || msg.role === 'assistant' ? ('assistant' as const) : ('user' as const),
-      content: msg.text,
-    })),
-    {
-      role: 'user',
-      content: userQuery,
-    },
-  ];
-
-  // 1. Jika API key ditujukan untuk DeepSeek Official (bukan sk-or-v1-), coba panggil DeepSeek Official API
-  if (!cleanKey.startsWith('sk-or-v1-')) {
-    try {
-      const dsResponse = await fetch('https://api.deepseek.com/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${cleanKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: messagesPayload,
-          max_tokens: 1000,
-          temperature: 0.3,
-        }),
-      });
-
-      if (dsResponse.ok) {
-        const dsData = await dsResponse.json();
-        const dsContent = dsData.choices?.[0]?.message?.content;
-        if (dsContent && typeof dsContent === 'string') {
-          return dsContent.trim();
-        }
-      } else {
-        const dsErr = await dsResponse.text();
-        console.warn(`DeepSeek direct endpoint (${dsResponse.status}):`, dsErr);
-      }
-    } catch (dsErr) {
-      console.warn('DeepSeek direct network exception:', dsErr);
+    if (response.status === 429) {
+      return '⚠️ **BATAS FREKUENSI TERCAPAI**: Mohon tunggu sejenak sebelum mengirim pertanyaan berikutnya untuk menjaga kestabilan sistem RS.';
     }
-  }
 
-  // 2. OpenRouter DeepSeek Engine (Fallback otomatis menggunakan model DeepSeek-Chat)
-  const openRouterKey = cleanKey.startsWith('sk-or-v1-') ? cleanKey : BACKUP_OPENROUTER_API_KEY;
-
-  const candidateModels = [
-    model || 'deepseek/deepseek-chat',
-    'deepseek/deepseek-chat',
-    'deepseek/deepseek-r1',
-    'google/gemini-2.5-flash',
-    'google/gemini-2.0-flash-exp:free',
-    'meta-llama/llama-3.3-70b-instruct',
-  ];
-
-  // Hapus duplikasi model
-  const modelsToTry = Array.from(new Set(candidateModels));
-
-  let lastError: any = null;
-
-  for (const targetModel of modelsToTry) {
-    try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openRouterKey}`,
-          'HTTP-Referer': 'https://umbrella-healthcare.id',
-          'X-Title': 'RS PT Umbrella Corp Healthcare Assistant',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: targetModel,
-          messages: messagesPayload,
-          max_tokens: 1000,
-          temperature: 0.3,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.warn(`AI Gateway error with model ${targetModel} (${response.status}):`, errorText);
-        lastError = new Error(`AI Gateway Error (${response.status}): ${errorText}`);
-        continue;
-      }
-
+    if (response.ok) {
       const data = await response.json();
-      const content = data.choices?.[0]?.message?.content;
-
-      if (content && typeof content === 'string') {
-        return content.trim();
+      if (data.reply) {
+        return data.reply.trim();
       }
-    } catch (err) {
-      console.warn(`Network/fetch failure with model ${targetModel}:`, err);
-      lastError = err;
+    }
+  } catch (proxyErr: any) {
+    console.warn('Backend proxy /api/chat unreachable or timed out, trying resilient direct fallback...', proxyErr);
+  }
+
+  // 2. Resilient Direct Fallback (Jika backend offline atau dijalankan statis)
+  // Single Model Call dengan Timeout Ketat (Maksimal 8 Detik) - Menghilangkan lag looping
+  const directKey = (apiKey || '').trim();
+  if (directKey) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      const endpoint = directKey.startsWith('sk-or-v1-')
+        ? 'https://openrouter.ai/api/v1/chat/completions'
+        : 'https://api.deepseek.com/chat/completions';
+
+      const headers: Record<string, string> = {
+        'Authorization': `Bearer ${directKey}`,
+        'Content-Type': 'application/json',
+      };
+
+      if (directKey.startsWith('sk-or-v1-')) {
+        headers['HTTP-Referer'] = 'https://umbrella-healthcare.id';
+        headers['X-Title'] = 'RS PT Umbrella Corp Healthcare Assistant';
+      }
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        signal: controller.signal,
+        headers,
+        body: JSON.stringify({
+          model: directKey.startsWith('sk-or-v1-') ? 'deepseek/deepseek-chat' : 'deepseek-chat',
+          messages: [
+            {
+              role: 'system',
+              content: `Anda adalah Umbrella AI Assistant resmi RS PT Umbrella Corp.\nData Panduan:\n${systemContext}`,
+            },
+            ...chatHistory.slice(-4).map((m) => ({
+              role: m.role === 'model' || m.role === 'assistant' ? 'assistant' : 'user',
+              content: m.text,
+            })),
+            { role: 'user', content: trimmedQuery },
+          ],
+          max_tokens: 800,
+          temperature: 0.3,
+        }),
+      });
+
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) return content.trim();
+      }
+    } catch (fallbackErr) {
+      console.warn('Direct fallback failed:', fallbackErr);
     }
   }
 
-  // Jika semua model gagal
-  throw lastError || new Error('Gagal mendapatkan balasan dari AI API.');
+  // 3. Respon Operasional Terstandarisasi Otomatis (Fail-Safe Response)
+  return `Terima kasih telah menghubungi **Umbrella AI Assistant** RS PT Umbrella Corp.\n\n- **Kamar Rawat Inap VIP:** Paviliun Aster (Tersedia 4 Bed) & Paviliun Melati (Tersedia 2 Bed) tarif **Rp 1.650.000 / malam**.\n- **Layanan Gawat Darurat 24 Jam:** Hotline IGD **(021) 8065-9911** atau Ambulans Darurat **119** (Bebas rujukan BPJS untuk kedaruratan).\n- **Pusat Informasi & Jadwal Dokter:** Hubungi Call Center di **(021) 8065-0000**.\n\nSilakan pilih topik bantuan cepat di atas atau ajukan pertanyaan spesifik terkait layanan rumah sakit kami.`;
 }
 
-// Alias fungsi untuk menjaga kompatibilitas penuh dengan kode yang memanggil callGeminiLive
+// Alias fungsi untuk kompatibilitas
 export const callGeminiLive = callOpenRouterLive;
 
 export async function callGeminiAPI(
   userQuery: string,
   chatHistory: Array<{ role: 'user' | 'model'; text: string }> = [],
-  apiKey: string = DEFAULT_DEEPSEEK_API_KEY
+  apiKey: string = ''
 ) {
   const text = await callOpenRouterLive({ userQuery, chatHistory, apiKey });
   return {

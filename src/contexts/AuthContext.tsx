@@ -110,17 +110,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (username: string, password: string) => {
     if (!isSupabaseConfigured) return { error: 'Supabase belum dikonfigurasi. Isi .env terlebih dahulu.' };
-    const { error } = await supabase.auth.signInWithPassword({
-      email: toEmail(username),
-      password,
-    });
-    if (error) return { error: error.message };
-    return { error: null };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: toEmail(username),
+        password,
+      });
+      if (error) return { error: error.message };
+      return { error: null };
+    } catch (e: any) {
+      return { error: e?.message || 'Gagal menghubungi server (Failed to fetch). Periksa koneksi/URL Supabase.' };
+    }
   };
 
   const signUp = async (payload: { username: string; password: string }) => {
     if (!isSupabaseConfigured) return { error: 'Supabase belum dikonfigurasi. Isi .env terlebih dahulu.' };
-    const username = payload.username.trim().toLowerCase();
+    try {
+      const username = payload.username.trim().toLowerCase();
     if (!/^[a-z0-9_]{3,20}$/.test(username)) {
       return { error: 'Username harus 3-20 karakter, hanya huruf/angka/underscore.' };
     }
@@ -149,6 +154,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
     return { error: null };
+    } catch (e: any) {
+      return { error: e?.message || 'Gagal menghubungi server (Failed to fetch). Periksa koneksi/URL Supabase.' };
+    }
   };
 
   const signOut = async () => {

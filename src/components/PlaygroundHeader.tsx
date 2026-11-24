@@ -112,15 +112,6 @@ export const PlaygroundHeader: React.FC<PlaygroundHeaderProps> = ({
       },
     },
     {
-      id: 'telekonsultasi',
-      label: 'Telekonsultasi',
-      onClick: () =>
-        setComingSoonFeature({
-          title: 'Telekonsultasi Dokter Spesialis',
-          desc: 'Layanan video call tatap muka dengan dokter spesialis sedang dalam tahap integrasi telemedicine.',
-        }),
-    },
-    {
       id: 'rekam-medis',
       label: 'Rekam Medis',
       onClick: () => setMedicalOpen(true),

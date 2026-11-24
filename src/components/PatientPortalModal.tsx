@@ -28,7 +28,7 @@ export const PatientPortalModal: React.FC<PatientPortalModalProps> = ({ isOpen, 
                 Portal Pasien & Hasil Diagnostik Terenkripsi
               </h3>
               <p className="text-xs text-[#64748B]">
-                Pasien: Ibu Siti Aminah (No. RM: UMB-2026-8812) • Terverifikasi SatuSehat
+                Pasien Terenkripsi: Ny. S*** A***** (No. RM: UMB-****-8812) • Terverifikasi SatuSehat
               </p>
             </div>
           </div>
