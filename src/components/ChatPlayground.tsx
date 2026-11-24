@@ -26,8 +26,12 @@ import {
   ZoomIn,
   ZoomOut,
   Info,
+  Mic,
+  Loader2,
 } from 'lucide-react';
 import { UmbrellaLogo } from './UmbrellaLogo';
+import { stripMarkdown } from '../services/chatEngine';
+import { startSmartSpeechRecognition, SmartSTTController } from '../services/speechService';
 
 export interface ChatItem {
   id: string;
@@ -56,22 +60,104 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
   const [seniorMode, setSeniorMode] = useState(false);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
 
+  // Speech-to-Text State
+  const [isListening, setIsListening] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [sttMessage, setSttMessage] = useState<string | null>(null);
+
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const sttControllerRef = useRef<SmartSTTController | null>(null);
 
   // Auto-scroll saat pesan baru muncul atau sedang loading
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
-  // Cleanup speech synthesis saat komponen ditutup
+  // Cleanup speech synthesis & microphone controller saat komponen ditutup
   useEffect(() => {
     return () => {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
+      if (sttControllerRef.current) {
+        sttControllerRef.current.stop();
+        sttControllerRef.current = null;
+      }
     };
   }, []);
+
+  // Fitur Smart Speech-to-Text dengan Auto-Stop Silence Detection
+  const toggleSpeechRecognition = async () => {
+    // Jika sedang mendengarkan, pengguna dapat klik manual untuk langsung berhenti
+    if (isListening) {
+      if (sttControllerRef.current) {
+        sttControllerRef.current.stop();
+        sttControllerRef.current = null;
+      }
+      setIsListening(false);
+      return;
+    }
+
+    if (isTranscribing) return;
+
+    setSttMessage(null);
+
+    const controller = await startSmartSpeechRecognition({
+      onInterimResult: (interimText) => {
+        // Kata-kata langsung muncul real-time saat pengguna berbicara
+        setInputText(interimText);
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 140)}px`;
+        }
+      },
+      onFinalResult: (finalText) => {
+        // Teks final otomatis terisi dan textarea terfokus saat pengguna selesai berbicara
+        setInputText(finalText);
+        setIsListening(false);
+        setIsTranscribing(false);
+        setSttMessage(null);
+
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.focus();
+            textareaRef.current.selectionStart = textareaRef.current.selectionEnd = textareaRef.current.value.length;
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 140)}px`;
+          }
+        }, 50);
+      },
+      onStateChange: (state, message) => {
+        if (state === 'listening') {
+          setIsListening(true);
+          setIsTranscribing(false);
+          setSttMessage(message || 'Mendengarkan... (otomatis transkrip saat Anda selesai bicara)');
+        } else if (state === 'transcribing') {
+          setIsListening(false);
+          setIsTranscribing(true);
+          setSttMessage(message || 'Memproses teks...');
+        } else if (state === 'idle') {
+          setIsListening(false);
+          setIsTranscribing(false);
+          if (message) {
+            setSttMessage(message);
+            setTimeout(() => setSttMessage(null), 3500);
+          } else {
+            setSttMessage(null);
+          }
+        }
+      },
+      onError: (errMsg) => {
+        setIsListening(false);
+        setIsTranscribing(false);
+        setSttMessage(errMsg);
+        setTimeout(() => setSttMessage(null), 4000);
+      },
+    });
+
+    sttControllerRef.current = controller;
+  };
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -101,9 +187,40 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
   };
 
   const handleCopyText = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
+    // Bersihkan format markdown (seperti **, *, ###, #, dll) saat disalin ke clipboard
+    const cleanText = stripMarkdown(text);
+    navigator.clipboard.writeText(cleanText);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2500);
+  };
+
+  // Handler paste untuk mencegah tanda bintang (*) dan pagar (#) masuk ke input box
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pasteData = e.clipboardData.getData('text');
+    if (!pasteData) return;
+
+    // Jika teks yang ditempel mengandung karakter format markdown (*, **, #, >)
+    if (/(\*\*|\*|#{1,6}\s+|^>\s+)/m.test(pasteData)) {
+      e.preventDefault();
+      const cleaned = stripMarkdown(pasteData);
+
+      const target = e.currentTarget;
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+      const currentVal = target.value;
+      const nextVal = currentVal.substring(0, start) + cleaned + currentVal.substring(end);
+
+      setInputText(nextVal);
+
+      // Sesuaikan tinggi textarea dan posisi kursor
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + cleaned.length;
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 140)}px`;
+        }
+      }, 0);
+    }
   };
 
   const handleRate = (id: string, type: 'up' | 'down') => {
@@ -186,13 +303,32 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
   // Helper format teks dengan highlight medis cerdas & nomor telepon interaktif
   const renderFormattedText = (text: string) => {
     const lines = text.split('\n');
-    return lines.map((line, lineIdx) => {
-      // Deteksi bullet point
-      const isBullet = line.trim().startsWith('•') || line.trim().startsWith('-');
-      const cleanLine = isBullet ? line.replace(/^[\s•-]+/, '').trim() : line;
+    return lines.map((rawLine, lineIdx) => {
+      let line = rawLine;
 
-      // Split bold formatting (**teks**)
-      const parts = cleanLine.split(/(\*\*.*?\*\*)/g);
+      // 1. Deteksi dan hilangkan Header Markdown (#, ##, ###, dst.) agar tidak muncul tanda pagar di layar
+      const headerMatch = line.match(/^(#{1,6})\s+(.*)$/);
+      let isHeader = false;
+      let headerLevel = 0;
+      if (headerMatch) {
+        isHeader = true;
+        headerLevel = headerMatch[1].length;
+        line = headerMatch[2]; // Hilangkan tanda '#'
+      }
+
+      // 2. Deteksi Blockquote (>)
+      let isQuote = false;
+      if (line.trim().startsWith('>')) {
+        isQuote = true;
+        line = line.replace(/^>\s*/, '');
+      }
+
+      // 3. Deteksi bullet point (termasuk •, -, atau *)
+      const isBullet = line.trim().startsWith('•') || line.trim().startsWith('-') || line.trim().startsWith('* ');
+      const cleanLine = isBullet ? line.replace(/^[\s•*-]+/, '').trim() : line;
+
+      // 4. Split formatting: Bold (**teks**) dan Italic (*teks*)
+      const parts = cleanLine.split(/(\*\*.*?\*\*|\*.*?\*)/g);
       const formattedParts = parts.map((part, partIdx) => {
         if (part.startsWith('**') && part.endsWith('**')) {
           const content = part.slice(2, -2);
@@ -214,6 +350,14 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
           );
         }
 
+        if (part.startsWith('*') && part.endsWith('*')) {
+          return (
+            <em key={partIdx} className="italic text-slate-700">
+              {part.slice(1, -1)}
+            </em>
+          );
+        }
+
         // Cek jika ada nomor telepon di teks biasa
         if (part.includes('021-8065-9911')) {
           return (
@@ -229,6 +373,30 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
 
         return part;
       });
+
+      if (isHeader) {
+        return (
+          <div
+            key={lineIdx}
+            className={`font-bold text-slate-900 ${
+              headerLevel <= 2 ? 'text-base sm:text-lg mt-3.5 mb-1.5' : 'text-sm sm:text-base mt-2.5 mb-1'
+            }`}
+          >
+            {formattedParts}
+          </div>
+        );
+      }
+
+      if (isQuote) {
+        return (
+          <div
+            key={lineIdx}
+            className="my-2 pl-3 border-l-2 border-[#E11D48] bg-rose-50/50 py-1 rounded-r text-slate-700 italic"
+          >
+            {formattedParts}
+          </div>
+        );
+      }
 
       if (isBullet) {
         return (
@@ -599,6 +767,42 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
             ))}
           </div>
 
+          {/* Status Banner STT (Perekaman & Transkripsi) */}
+          {(isListening || isTranscribing || sttMessage) && (
+            <div className="mb-2 px-3 py-1.5 rounded-xl text-xs flex items-center justify-between transition-all bg-white border border-rose-200 shadow-sm">
+              <div className="flex items-center space-x-2">
+                {isListening && (
+                  <>
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
+                    <span className="font-semibold text-rose-600 animate-pulse">
+                      Mendengarkan suara Anda... (Klik tombol mic lagi jika sudah selesai bicara)
+                    </span>
+                  </>
+                )}
+                {isTranscribing && (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 text-[#E11D48] animate-spin" />
+                    <span className="font-semibold text-slate-700">
+                      Mentranskripsi suara dengan Deepgram AI...
+                    </span>
+                  </>
+                )}
+                {!isListening && !isTranscribing && sttMessage && (
+                  <span className="font-medium text-amber-600">{sttMessage}</span>
+                )}
+              </div>
+              {isListening && (
+                <button
+                  type="button"
+                  onClick={toggleSpeechRecognition}
+                  className="text-[11px] font-bold text-rose-600 hover:text-rose-700 underline"
+                >
+                  Selesai
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Input Form Bar */}
           <form onSubmit={handleSubmit} className="relative flex items-end bg-slate-50 focus-within:bg-white border border-slate-300 focus-within:border-[#E11D48] focus-within:ring-2 focus-within:ring-rose-100 rounded-2xl p-1.5 transition-all shadow-inner">
             <textarea
@@ -607,40 +811,70 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
               value={inputText}
               onChange={handleTextareaInput}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               placeholder="Tanyakan keluhan, jadwal dokter spesialis, kamar VIP, atau alur BPJS..."
-              className={`w-full py-2 pl-3 pr-20 bg-transparent focus:outline-none resize-none leading-relaxed placeholder:text-slate-400 text-slate-800 transition-all ${seniorMode ? 'text-base' : 'text-xs sm:text-sm'
+              className={`w-full py-2 pl-3 pr-28 bg-transparent focus:outline-none resize-none leading-relaxed placeholder:text-slate-400 text-slate-800 transition-all ${seniorMode ? 'text-base' : 'text-xs sm:text-sm'
                 }`}
               style={{ minHeight: '40px', maxHeight: '120px' }}
             />
 
-            {/* Clear Text button */}
-            {inputText.trim().length > 0 && (
+            {/* Action Buttons Zone: Clear, Mic STT, Kirim */}
+            <div className="flex items-center space-x-1.5 pb-1 pr-1 flex-shrink-0">
+              {/* Clear Text button */}
+              {inputText.trim().length > 0 && !isListening && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInputText('');
+                    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+                  }}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-colors"
+                  title="Hapus ketikan"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+
+              {/* Tombol Mic (Speech-to-Text Deepgram) */}
               <button
                 type="button"
-                onClick={() => {
-                  setInputText('');
-                  if (textareaRef.current) textareaRef.current.style.height = 'auto';
-                }}
-                className="absolute right-12 bottom-2.5 p-1 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
-                title="Hapus ketikan"
+                onClick={toggleSpeechRecognition}
+                disabled={isTranscribing || isLoading}
+                className={`p-2 rounded-xl transition-all flex items-center justify-center ${isListening
+                  ? 'bg-rose-500 text-white ring-4 ring-rose-200 animate-pulse shadow-md'
+                  : isTranscribing
+                    ? 'bg-rose-50 text-rose-600 cursor-wait'
+                    : 'text-slate-500 hover:text-[#E11D48] hover:bg-rose-50'
+                  }`}
+                title={
+                  isListening
+                    ? 'Sedang merekam... Klik untuk selesai'
+                    : isTranscribing
+                      ? 'Sedang mentranskripsi suara...'
+                      : 'Bicara dengan Suara (Speech-to-Text)'
+                }
               >
-                <X className="w-4 h-4" />
+                {isTranscribing ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-[#E11D48]" />
+                ) : (
+                  <Mic className="w-4 h-4" />
+                )}
               </button>
-            )}
 
-            {/* Tombol Kirim */}
-            <button
-              type="submit"
-              disabled={!inputText.trim() || isLoading}
-              className={`p-2 sm:px-3.5 sm:py-2 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5 transition-all shadow-sm ${!inputText.trim() || isLoading
-                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                : 'bg-[#E11D48] hover:bg-[#BE123C] text-white active:scale-95 shadow-rose-500/25'
-                }`}
-              title="Kirim pertanyaan ke Asisten AI"
-            >
-              <span className="hidden sm:inline">Kirim</span>
-              <Send className="w-3.5 h-3.5" />
-            </button>
+              {/* Tombol Kirim */}
+              <button
+                type="submit"
+                disabled={!inputText.trim() || isLoading || isListening}
+                className={`p-2 sm:px-3.5 sm:py-2 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5 transition-all shadow-sm ${!inputText.trim() || isLoading || isListening
+                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  : 'bg-[#E11D48] hover:bg-[#BE123C] text-white active:scale-95 shadow-rose-500/25'
+                  }`}
+                title="Kirim pertanyaan ke Asisten AI"
+              >
+                <span className="hidden sm:inline">Kirim</span>
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </form>
 
           {/* Petunjuk & Catatan Kaki */}

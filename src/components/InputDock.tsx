@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Paperclip, ShieldCheck, Play, ArrowRight, CornerDownLeft, Sparkles, Mic, MicOff } from 'lucide-react';
+import { Paperclip, ShieldCheck, Play, ArrowRight, CornerDownLeft, Sparkles, Mic, MicOff, Loader2 } from 'lucide-react';
 import { ActionPill } from '../types';
+import { stripMarkdown } from '../services/chatEngine';
+import { startSmartSpeechRecognition, SmartSTTController } from '../services/speechService';
 
 interface InputDockProps {
   onSendMessage: (text: string) => void;
@@ -19,7 +21,11 @@ export const InputDock: React.FC<InputDockProps> = ({
 }) => {
   const [inputText, setInputText] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [sttMessage, setSttMessage] = useState<string | null>(null);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const sttControllerRef = useRef<SmartSTTController | null>(null);
 
   // Auto-resize textarea height
   useEffect(() => {
@@ -28,6 +34,16 @@ export const InputDock: React.FC<InputDockProps> = ({
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 140)}px`;
     }
   }, [inputText]);
+
+  // Cleanup controller on unmount
+  useEffect(() => {
+    return () => {
+      if (sttControllerRef.current) {
+        sttControllerRef.current.stop();
+        sttControllerRef.current = null;
+      }
+    };
+  }, []);
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -47,18 +63,99 @@ export const InputDock: React.FC<InputDockProps> = ({
     }
   };
 
-  // Simulated Speech-to-Text for accessibility
-  const toggleSpeechRecognition = () => {
-    if (!isListening) {
-      setIsListening(true);
-      // Simulate real-time speech capture
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pasteData = e.clipboardData.getData('text');
+    if (!pasteData) return;
+
+    if (/(\*\*|\*|#{1,6}\s+|^>\s+)/m.test(pasteData)) {
+      e.preventDefault();
+      const cleaned = stripMarkdown(pasteData);
+
+      const target = e.currentTarget;
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+      const currentVal = target.value;
+      const nextVal = currentVal.substring(0, start) + cleaned + currentVal.substring(end);
+
+      setInputText(nextVal);
+
       setTimeout(() => {
-        setInputText('Mohon info jadwal praktik dokter spesialis anak hari ini');
-        setIsListening(false);
-      }, 2000);
-    } else {
-      setIsListening(false);
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + cleaned.length;
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 140)}px`;
+        }
+      }, 0);
     }
+  };
+
+  // Smart Speech-to-Text dengan Auto-Stop Silence Detection
+  const toggleSpeechRecognition = async () => {
+    if (isListening) {
+      if (sttControllerRef.current) {
+        sttControllerRef.current.stop();
+        sttControllerRef.current = null;
+      }
+      setIsListening(false);
+      return;
+    }
+
+    if (isTranscribing) return;
+
+    setSttMessage(null);
+
+    const controller = await startSmartSpeechRecognition({
+      onInterimResult: (interimText) => {
+        setInputText(interimText);
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 140)}px`;
+        }
+      },
+      onFinalResult: (finalText) => {
+        setInputText(finalText);
+        setIsListening(false);
+        setIsTranscribing(false);
+        setSttMessage(null);
+
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.focus();
+            textareaRef.current.selectionStart = textareaRef.current.selectionEnd = textareaRef.current.value.length;
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 140)}px`;
+          }
+        }, 50);
+      },
+      onStateChange: (state, message) => {
+        if (state === 'listening') {
+          setIsListening(true);
+          setIsTranscribing(false);
+          setSttMessage(message || 'Mendengarkan... (otomatis selesai saat Anda berhenti berbicara)');
+        } else if (state === 'transcribing') {
+          setIsListening(false);
+          setIsTranscribing(true);
+          setSttMessage(message || 'Memproses teks...');
+        } else if (state === 'idle') {
+          setIsListening(false);
+          setIsTranscribing(false);
+          if (message) {
+            setSttMessage(message);
+            setTimeout(() => setSttMessage(null), 3500);
+          } else {
+            setSttMessage(null);
+          }
+        }
+      },
+      onError: (errMsg) => {
+        setIsListening(false);
+        setIsTranscribing(false);
+        setSttMessage(errMsg);
+        setTimeout(() => setSttMessage(null), 4000);
+      },
+    });
+
+    sttControllerRef.current = controller;
   };
 
   return (
@@ -90,6 +187,7 @@ export const InputDock: React.FC<InputDockProps> = ({
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder={
               seniorMode
                 ? "Ketik pertanyaan Anda di sini... (atau tekan ikon mikrofon)"
@@ -119,20 +217,55 @@ export const InputDock: React.FC<InputDockProps> = ({
             <button
               type="button"
               onClick={toggleSpeechRecognition}
-              className={`p-1 rounded transition-colors ${
+              disabled={isTranscribing}
+              className={`p-1.5 rounded-lg transition-all flex items-center gap-1 ${
                 isListening
-                  ? 'bg-rose-100 text-[#E11D48] animate-pulse'
+                  ? 'bg-rose-100 text-[#E11D48] ring-2 ring-rose-400 animate-pulse'
+                  : isTranscribing
+                  ? 'bg-slate-100 text-[#E11D48] cursor-wait'
                   : 'text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100'
               }`}
-              title="Input Suara (Speech-to-Text)"
+              title={
+                isListening
+                  ? 'Sedang merekam... Klik lagi untuk memproses'
+                  : isTranscribing
+                  ? 'Sedang memproses suara...'
+                  : 'Input Suara (Speech-to-Text Deepgram)'
+              }
             >
-              {isListening ? <Mic className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              {isTranscribing ? (
+                <Loader2 className="w-4 h-4 animate-spin text-[#E11D48]" />
+              ) : (
+                <Mic className="w-4 h-4" />
+              )}
             </button>
 
-            <div className="hidden sm:flex items-center space-x-1 text-[12px] text-[#64748B]">
-              <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />
-              <span>Layanan Pasien Terverifikasi</span>
-            </div>
+            {/* Dynamic Status / Visual Indicator */}
+            {isListening && (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11.5px] font-medium bg-rose-50 text-rose-600 border border-rose-200 animate-pulse">
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                Mendengarkan... (Klik mic bila selesai)
+              </span>
+            )}
+
+            {isTranscribing && (
+              <span className="text-[11.5px] text-rose-600 font-medium animate-pulse">
+                Mentranskripsi suara (Deepgram AI)...
+              </span>
+            )}
+
+            {sttMessage && !isListening && !isTranscribing && (
+              <span className="text-[11.5px] text-amber-600 font-medium">
+                {sttMessage}
+              </span>
+            )}
+
+            {!isListening && !isTranscribing && !sttMessage && (
+              <div className="hidden sm:flex items-center space-x-1 text-[12px] text-[#64748B]">
+                <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />
+                <span>Layanan Pasien Terverifikasi</span>
+              </div>
+            )}
           </div>
 
           {/* Right: Shortcut Hint & Send Button */}

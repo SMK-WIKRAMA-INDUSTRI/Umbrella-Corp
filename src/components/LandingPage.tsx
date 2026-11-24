@@ -36,6 +36,11 @@ import {
 } from 'lucide-react';
 import { UmbrellaLogo } from './UmbrellaLogo';
 import { AnimeBackground } from './AnimeBackground';
+import { AuthModal } from './AuthModal';
+import { MedicalRecordsModal } from './MedicalRecordsModal';
+import { LocationMapModal } from './LocationMapModal';
+import { useAuth } from '../contexts/AuthContext';
+import { LogOut, User as UserIcon } from 'lucide-react';
 import doctorImg from '../assets/doctors-duo.png';
 import { INITIAL_DOCTORS, INSURANCE_PARTNERS, HOSPITAL_METADATA } from '../data/hospitalData';
 
@@ -44,6 +49,26 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) => {
+  const { user, profile, signOut } = useAuth();
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [medicalOpen, setMedicalOpen] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
+
+  // Guard: chatbot hanya bisa diakses setelah login
+  const openAuthForChat = () => {
+    window.alert('Silakan login terlebih dahulu untuk menggunakan fitur chatbot.');
+    setAuthMode('login');
+    setAuthOpen(true);
+  };
+  const handleLaunchAssistant = (initialPrompt?: string) => {
+    if (!user) {
+      openAuthForChat();
+      return;
+    }
+    onLaunchAssistant(initialPrompt);
+  };
+
   // State modal untuk fitur yang berstatus "Coming Soon"
   const [comingSoonFeature, setComingSoonFeature] = useState<{ title: string; desc: string } | null>(null);
 
@@ -239,36 +264,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
       isAnchor: true,
     },
     {
-      id: 'chatbot',
-      label: 'Chatbot AI',
-      onClick: () => onLaunchAssistant(),
-    },
-    {
-      id: 'telekonsultasi',
-      label: 'Telekonsultasi',
-      onClick: () =>
-        setComingSoonFeature({
-          title: 'Telekonsultasi Dokter Spesialis',
-          desc: 'Layanan konsultasi tatap muka video call dengan dokter spesialis sedang dalam tahap integrasi telemedicine.',
-        }),
-    },
-    {
-      id: 'rekam-medis',
-      label: 'Rekam Medis',
-      onClick: () =>
-        setComingSoonFeature({
-          title: 'Rekam Medis Digital & Laboratorium',
-          desc: 'Portal akses riwayat pemeriksaan, diagnosa dokter, dan hasil laboratorium mandiri sedang dalam tahap standarisasi SIMRS.',
-        }),
-    },
-    {
       id: 'peta-lokasi',
       label: 'Peta Lokasi',
-      onClick: () =>
-        setComingSoonFeature({
-          title: 'Peta Fasilitas & Jaringan Faskes',
-          desc: 'Peta interaktif navigasi ruangan rumah sakit serta jaringan klinik RS Umbrella sedang dalam pengembangan.',
-        }),
+      onClick: () => setLocationOpen(true),
     },
   ];
 
@@ -448,37 +446,51 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
             })}
           </nav>
 
-          {/* Sisi Kanan: Desktop (Masuk & Daftar) */}
+          {/* Sisi Kanan: Desktop (Masuk & Daftar / Akun) */}
           <div className="hidden lg:flex items-center space-x-3">
-            <button
-              onClick={() =>
-                setComingSoonFeature({
-                  title: 'Portal Masuk Pasien',
-                  desc: 'Layanan login autentikasi pasien sedang disiapkan untuk keamanan data medis terenkripsi.',
-                })
-              }
-              className="px-5 py-2.5 text-sm sm:text-base font-semibold text-slate-700 hover:text-[#E11D48] transition-colors active:scale-95"
-            >
-              Masuk
-            </button>
+            {user ? (
+              <>
+                <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <UserIcon className="w-4 h-4 text-[#E11D48]" />
+                  {profile?.username || user.email?.split('@')[0]}
+                </span>
+                <button
+                  onClick={() => signOut()}
+                  className="px-5 py-2.5 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold text-sm transition-all active:scale-95 flex items-center gap-1.5"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Keluar
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => {
+                    setAuthMode('login');
+                    setAuthOpen(true);
+                  }}
+                  className="px-5 py-2.5 text-sm sm:text-base font-semibold text-slate-700 hover:text-[#E11D48] transition-colors active:scale-95"
+                >
+                  Masuk
+                </button>
 
-            <button
-              onClick={() =>
-                setComingSoonFeature({
-                  title: 'Pendaftaran Akun Pasien Baru',
-                  desc: 'Fitur pendaftaran akun digital pasien baru akan segera dibuka pada rilis portal tahap berikutnya.',
-                })
-              }
-              className="px-6 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm sm:text-base shadow-sm hover:shadow-md transition-all active:scale-95"
-            >
-              Daftar
-            </button>
+                <button
+                  onClick={() => {
+                    setAuthMode('register');
+                    setAuthOpen(true);
+                  }}
+                  className="px-6 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm sm:text-base shadow-sm hover:shadow-md transition-all active:scale-95"
+                >
+                  Daftar
+                </button>
+              </>
+            )}
           </div>
 
           {/* Sisi Kanan: Mobile / Tablet Controls (Tombol Chat Cepat + Tombol Hamburger Menu) */}
           <div className="lg:hidden flex items-center space-x-2">
             <button
-              onClick={() => onLaunchAssistant()}
+              onClick={() => handleLaunchAssistant()}
               className="px-3.5 py-2 rounded-full bg-rose-50 text-[#E11D48] border border-rose-200 text-xs font-bold flex items-center space-x-1.5 active:scale-95 shadow-2xs"
             >
               <span className="w-2 h-2 rounded-full bg-[#E11D48] animate-pulse"></span>
@@ -574,25 +586,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
 
               {/* Tombol Aksi Masuk & Daftar untuk Mobile */}
               <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-3">
+                {user ? null : (
                 <button
                   onClick={() => {
                     setIsMobileMenuOpen(false);
-                    setComingSoonFeature({
-                      title: 'Portal Masuk Pasien',
-                      desc: 'Layanan login autentikasi pasien sedang disiapkan untuk keamanan data medis terenkripsi.',
-                    });
+                    setAuthMode('login');
+                    setAuthOpen(true);
                   }}
                   className="w-full py-2.5 rounded-xl border border-slate-300 text-slate-800 hover:bg-slate-50 font-semibold text-sm text-center transition-all active:scale-95"
                 >
                   Masuk
                 </button>
+                )}
                 <button
                   onClick={() => {
                     setIsMobileMenuOpen(false);
-                    setComingSoonFeature({
-                      title: 'Pendaftaran Akun Pasien Baru',
-                      desc: 'Fitur pendaftaran akun digital pasien baru akan segera dibuka pada rilis portal tahap berikutnya.',
-                    });
+                    setAuthMode('register');
+                     setAuthOpen(true);
                   }}
                   className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm text-center shadow-sm transition-all active:scale-95"
                 >
@@ -645,7 +655,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
 
               <div className="anime-hero-stagger pt-1 sm:pt-2 flex justify-center lg:justify-start">
                 <button
-                  onClick={() => onLaunchAssistant()}
+                  onClick={() => handleLaunchAssistant()}
                   className="inline-flex items-center space-x-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-full bg-[#E11D48] hover:bg-[#BE123C] text-white font-medium text-sm shadow-sm hover:shadow transition-all active:scale-95 hover:scale-105 group"
                 >
                   <span>Konsultasi AI</span>
@@ -682,7 +692,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
 
               <div className="anime-hero-stagger pt-1 sm:pt-2 flex justify-center lg:justify-start">
                 <button
-                  onClick={() => onLaunchAssistant()}
+                  onClick={() => handleLaunchAssistant()}
                   className="inline-flex items-center space-x-1.5 text-xs sm:text-sm font-semibold text-[#E11D48] hover:text-[#BE123C] hover:underline group transition-all"
                 >
                   <span>Mulai Konsultasi AI Sekarang</span>
@@ -1144,7 +1154,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                     <button
                       type="button"
                       onClick={() =>
-                        onLaunchAssistant(
+                        handleLaunchAssistant(
                           `Halo, saya ingin menanyakan ketersediaan dan reservasi kamar ${
                             calcRoomType === 'vvip' ? 'VVIP Aster Suite' : calcRoomType === 'aster' ? 'VIP Aster' : 'VIP Melati'
                           } ranjang ${selectedBedId} untuk estimasi ${calcNights} malam inap.`
@@ -1304,7 +1314,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                   <button
                     type="button"
                     onClick={() =>
-                      onLaunchAssistant(
+                      handleLaunchAssistant(
                         `Halo, saya ingin reservasi nomor antrean dokter ${doc.name} (${doc.specialty}) untuk jadwal hari ${scheduleDay} di ${doc.room}.`
                       )
                     }
@@ -1470,7 +1480,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                     <button
                       type="button"
                       onClick={() =>
-                        onLaunchAssistant(
+                        handleLaunchAssistant(
                           'Bagaimana alur dan syarat rujukan BPJS Kesehatan untuk berobat ke poliklinik spesialis RS Umbrella?'
                         )
                       }
@@ -1565,7 +1575,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                       <button
                         type="button"
                         onClick={() =>
-                          onLaunchAssistant(
+                          handleLaunchAssistant(
                             `Bagaimana alur klaim penjaminan non-tunai (cashless) untuk asuransi ${ins.name} di RS Umbrella?`
                           )
                         }
@@ -1792,7 +1802,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onLaunchAssistant(
+                          handleLaunchAssistant(
                             `Saya ingin informasi rute, jadwal layanan, dan prosedur di ${item.name} (${selectedFloor === 4 ? 'Lantai 4/5' : 'Lantai ' + selectedFloor}).`
                           );
                         }}
@@ -1997,7 +2007,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                   </li>
                   <li>
                     <button
-                      onClick={() => onLaunchAssistant()}
+                      onClick={() => handleLaunchAssistant()}
                       className="inline-flex items-center space-x-1.5 text-[#E11D48] font-bold hover:underline transition-colors text-left"
                     >
                       <span>Chatbot AI</span>
@@ -2225,7 +2235,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
               <button
                 onClick={() => {
                   setComingSoonFeature(null);
-                  onLaunchAssistant();
+                  handleLaunchAssistant();
                 }}
                 className="px-4 py-2 rounded-xl bg-[#E11D48] hover:bg-[#BE123C] text-white text-xs font-semibold shadow-sm flex items-center space-x-1.5 transition-all"
               >
@@ -2237,6 +2247,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
         </div>
       )}
 
+      <AuthModal
+        isOpen={authOpen}
+        onClose={() => setAuthOpen(false)}
+        initialMode={authMode}
+      />
+      <MedicalRecordsModal isOpen={medicalOpen} onClose={() => setMedicalOpen(false)} />
+      <LocationMapModal isOpen={locationOpen} onClose={() => setLocationOpen(false)} />
     </div>
   );
 };

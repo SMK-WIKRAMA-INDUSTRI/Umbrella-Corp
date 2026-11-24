@@ -3,6 +3,8 @@ import { animate, stagger } from 'animejs';
 
 export const AnimeBackground: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const activeAnimRef = useRef<any>(null);
+  const lastWaveTimeRef = useRef<number>(0);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -11,7 +13,7 @@ export const AnimeBackground: React.FC = () => {
 
     try {
       // Grid stagger animation inspired by the signature showcase on animejs.com
-      const anim = animate(nodes, {
+      activeAnimRef.current = animate(nodes, {
         scale: [0.4, 1.2, 0.75],
         opacity: [0.15, 0.6, 0.25],
         delay: stagger(90, {
@@ -24,7 +26,9 @@ export const AnimeBackground: React.FC = () => {
 
       return () => {
         try {
-          anim.pause();
+          if (activeAnimRef.current) {
+            activeAnimRef.current.pause();
+          }
         } catch (_) {}
       };
     } catch (err) {
@@ -32,19 +36,23 @@ export const AnimeBackground: React.FC = () => {
     }
   }, []);
 
-  // Handle subtle interactive mouse ripple wave
+  // Handle subtle interactive mouse ripple wave with throttle to prevent memory leak & CPU spike
   const handleMouseMove = () => {
+    const now = Date.now();
+    if (now - lastWaveTimeRef.current < 600) return; // Throttled to 600ms
+    lastWaveTimeRef.current = now;
+
     if (!containerRef.current) return;
     const nodes = containerRef.current.querySelectorAll('.anime-stagger-node');
     if (!nodes || nodes.length === 0) return;
 
     try {
       animate(nodes, {
-        scale: [1, 1.45, 1],
-        delay: stagger(20, {
+        scale: [1, 1.3, 1],
+        delay: stagger(15, {
           from: 'center',
         }),
-        duration: 800,
+        duration: 700,
         ease: 'outElastic',
       });
     } catch (_) {}
