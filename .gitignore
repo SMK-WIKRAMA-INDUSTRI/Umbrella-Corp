@@ -24,7 +24,9 @@ coverage/
 .env*.local
 .env.production
 
-# Editor directories and files
+# Supabase temp
+supabase/.temp/
+.temp/
 .vscode/*
 !.vscode/extensions.json
 .idea/

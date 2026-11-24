@@ -422,7 +422,7 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
     <div className="flex-1 h-full min-h-0 flex flex-col bg-slate-50/70 select-text relative">
 
       {/* Area Chat Utama: Berpusat, Nyaman & Pas Layar */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-2 sm:py-3 min-h-0 flex flex-col items-center justify-center">
+      <div className={`flex-1 overflow-y-auto px-4 sm:px-6 py-2 sm:py-3 min-h-0 flex flex-col items-center ${messages.length === 0 ? 'justify-center' : 'justify-start'}`}>
         <div className={`w-full max-w-3xl flex-1 flex flex-col ${messages.length === 0 ? 'justify-center' : 'justify-between'}`}>
 
           {messages.length === 0 ? (
