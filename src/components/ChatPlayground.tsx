@@ -27,6 +27,7 @@ import {
   ZoomOut,
   Info,
   Mic,
+  PhoneOff,
   Loader2,
 } from 'lucide-react';
 import { UmbrellaLogo } from './UmbrellaLogo';
@@ -44,7 +45,7 @@ export interface ChatItem {
 interface ChatPlaygroundProps {
   messages: ChatItem[];
   isLoading: boolean;
-  onSendMessage: (query: string) => void;
+  onSendMessage: (query: string) => Promise<string>;
   onClearChat: () => void;
 }
 
@@ -64,10 +65,19 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
   const [isListening, setIsListening] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [sttMessage, setSttMessage] = useState<string | null>(null);
+  const [isVoiceCallDialogOpen, setIsVoiceCallDialogOpen] = useState(false);
+  const [isVoiceCallActive, setIsVoiceCallActive] = useState(false);
+  const [voiceCallPhase, setVoiceCallPhase] = useState<
+    'ready' | 'listening' | 'transcribing' | 'thinking' | 'speaking' | 'error'
+  >('ready');
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [voiceCallError, setVoiceCallError] = useState<string | null>(null);
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const sttControllerRef = useRef<SmartSTTController | null>(null);
+  const voiceCallActiveRef = useRef(false);
+  const startVoiceListeningRef = useRef<(() => Promise<void>) | null>(null);
 
   // Auto-scroll saat pesan baru muncul atau sedang loading
   useEffect(() => {
@@ -77,6 +87,7 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
   // Cleanup speech synthesis & microphone controller saat komponen ditutup
   useEffect(() => {
     return () => {
+      voiceCallActiveRef.current = false;
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
@@ -157,6 +168,144 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
     });
 
     sttControllerRef.current = controller;
+  };
+
+  const speakVoiceReply = (text: string): Promise<boolean> => {
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+      setVoiceCallError('Fitur suara keluar tidak didukung oleh browser ini.');
+      setVoiceCallPhase('error');
+      return Promise.resolve(false);
+    }
+
+    return new Promise((resolve) => {
+      const utterance = new SpeechSynthesisUtterance(
+        stripMarkdown(text).replace(/\s+/g, ' ').trim(),
+      );
+      utterance.lang = 'id-ID';
+      utterance.rate = 0.96;
+      utterance.onend = () => resolve(true);
+      utterance.onerror = () => {
+        if (voiceCallActiveRef.current) {
+          setVoiceCallError('Jawaban tidak dapat dibacakan. Coba mulai ulang percakapan suara.');
+          setVoiceCallPhase('error');
+        }
+        resolve(false);
+      };
+
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    });
+  };
+
+  const handleVoiceQuery = async (transcript: string) => {
+    if (!voiceCallActiveRef.current) return;
+
+    sttControllerRef.current = null;
+    setVoiceTranscript(transcript);
+    setVoiceCallError(null);
+    setVoiceCallPhase('thinking');
+
+    try {
+      const reply = await onSendMessage(transcript);
+      if (!voiceCallActiveRef.current) return;
+
+      setVoiceCallPhase('speaking');
+      const spoken = await speakVoiceReply(reply);
+      if (spoken && voiceCallActiveRef.current) {
+        setVoiceTranscript('');
+        await startVoiceListeningRef.current?.();
+      }
+    } catch (error) {
+      if (!voiceCallActiveRef.current) return;
+      setVoiceCallError(
+        error instanceof Error ? error.message : 'Terjadi kendala saat memproses pertanyaan.',
+      );
+      setVoiceCallPhase('error');
+    }
+  };
+
+  const startVoiceListening = async () => {
+    if (!voiceCallActiveRef.current) return;
+
+    setVoiceCallError(null);
+    try {
+      const controller = await startSmartSpeechRecognition({
+        forceDeepgram: true,
+        onInterimResult: setVoiceTranscript,
+        onFinalResult: (transcript) => {
+          void handleVoiceQuery(transcript);
+        },
+        onStateChange: (state, message) => {
+          if (!voiceCallActiveRef.current) return;
+          if (state === 'listening') {
+            setVoiceCallPhase('listening');
+          } else if (state === 'transcribing') {
+            setVoiceCallPhase('transcribing');
+          } else if (message) {
+            setVoiceCallError(message);
+            setVoiceCallPhase('error');
+          }
+        },
+        onError: (message) => {
+          if (!voiceCallActiveRef.current) return;
+          setVoiceCallError(message);
+          setVoiceCallPhase('error');
+        },
+      });
+
+      if (!voiceCallActiveRef.current) {
+        controller.stop();
+        return;
+      }
+      sttControllerRef.current = controller;
+    } catch (error) {
+      if (!voiceCallActiveRef.current) return;
+      setVoiceCallError(
+        error instanceof Error ? error.message : 'Tidak dapat memulai mikrofon.',
+      );
+      setVoiceCallPhase('error');
+    }
+  };
+  startVoiceListeningRef.current = startVoiceListening;
+
+  const handleStartVoiceCall = () => {
+    if (!('speechSynthesis' in window)) {
+      setVoiceCallError('Fitur suara tidak didukung oleh browser ini.');
+      setVoiceCallPhase('error');
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setVoiceCallError('Browser ini tidak mendukung perekaman suara yang dibutuhkan Deepgram.');
+      setVoiceCallPhase('error');
+      return;
+    }
+
+    voiceCallActiveRef.current = true;
+    setIsVoiceCallActive(true);
+    setVoiceCallError(null);
+    setVoiceTranscript('');
+    void startVoiceListeningRef.current?.();
+  };
+
+  const handleEndVoiceCall = () => {
+    voiceCallActiveRef.current = false;
+    setIsVoiceCallActive(false);
+    sttControllerRef.current?.stop();
+    sttControllerRef.current = null;
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    setVoiceCallPhase('ready');
+    setVoiceTranscript('');
+  };
+
+  const handleCloseVoiceCallDialog = () => {
+    if (voiceCallActiveRef.current) {
+      handleEndVoiceCall();
+    }
+    setIsVoiceCallDialogOpen(false);
+    setVoiceCallError(null);
+    setVoiceCallPhase('ready');
   };
 
   const handleSubmit = (e?: React.FormEvent) => {
@@ -740,6 +889,20 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
 
           {/* Quick Follow-up Chips: Saran Pertanyaan Lanjutan yang Memudahkan Pasien */}
           <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                setVoiceCallError(null);
+                setVoiceCallPhase('ready');
+                setIsVoiceCallDialogOpen(true);
+              }}
+              disabled={isLoading || isListening || isTranscribing || isVoiceCallActive}
+              className="flex-shrink-0 inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#E11D48] hover:bg-[#BE123C] text-white border border-rose-600 text-[11px] font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Mulai percakapan suara dengan AI"
+            >
+              <PhoneCall className="w-3 h-3" />
+              <span>Voice AI</span>
+            </button>
             {messages.length > 0 && (
               <button
                 type="button"
@@ -889,6 +1052,111 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
 
         </div>
       </div>
+
+      {isVoiceCallDialogOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="voice-call-title"
+            className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+              <div>
+                <h2 id="voice-call-title" className="font-bold text-slate-900">
+                  Percakapan Suara AI
+                </h2>
+                <p className="text-xs text-slate-500">Bicara, dengarkan jawaban, lalu lanjutkan percakapan</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseVoiceCallDialog}
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+                aria-label="Tutup percakapan suara"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex flex-col items-center px-6 py-7 text-center">
+              <div
+                className={`mb-4 flex h-20 w-20 items-center justify-center rounded-full text-white shadow-lg ${
+                  voiceCallPhase === 'listening'
+                    ? 'bg-rose-600 animate-pulse'
+                    : voiceCallPhase === 'speaking'
+                      ? 'bg-emerald-600'
+                      : 'bg-slate-800'
+                }`}
+              >
+                {voiceCallPhase === 'listening' ? (
+                  <Mic className="h-8 w-8" />
+                ) : voiceCallPhase === 'speaking' ? (
+                  <Volume2 className="h-8 w-8" />
+                ) : (
+                  <PhoneCall className="h-8 w-8" />
+                )}
+              </div>
+
+              <p className="font-semibold text-slate-900" aria-live="polite">
+                {voiceCallPhase === 'ready' && 'Siap memulai percakapan'}
+                {voiceCallPhase === 'listening' && 'Mendengarkan ucapan Anda'}
+                {voiceCallPhase === 'transcribing' && 'Mengubah ucapan menjadi teks'}
+                {voiceCallPhase === 'thinking' && 'AI sedang menyiapkan jawaban'}
+                {voiceCallPhase === 'speaking' && 'AI sedang membacakan jawaban'}
+                {voiceCallPhase === 'error' && 'Perlu tindakan'}
+              </p>
+
+              {voiceTranscript && (
+                <p className="mt-3 max-h-24 overflow-y-auto rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  {voiceTranscript}
+                </p>
+              )}
+              {voiceCallError && (
+                <p role="alert" className="mt-3 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {voiceCallError}
+                </p>
+              )}
+
+              <p className="mt-5 text-xs leading-relaxed text-slate-500">
+                Ini percakapan dengan AI, bukan sambungan ke petugas manusia. Audio diproses Deepgram untuk transkripsi dan teks dikirim ke layanan AI. Hindari menyebut NIK, kata sandi, atau data sensitif.
+              </p>
+
+              <div className="mt-6 flex w-full flex-col gap-2 sm:flex-row sm:justify-center">
+                {!isVoiceCallActive ? (
+                  <button
+                    type="button"
+                    onClick={handleStartVoiceCall}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#E11D48] px-5 py-3 text-sm font-bold text-white hover:bg-[#BE123C]"
+                  >
+                    <PhoneCall className="h-4 w-4" />
+                    Mulai percakapan
+                  </button>
+                ) : (
+                  <>
+                    {voiceCallPhase === 'error' && (
+                      <button
+                        type="button"
+                        onClick={() => void startVoiceListeningRef.current?.()}
+                        className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        Coba bicara lagi
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleEndVoiceCall}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white hover:bg-slate-700"
+                    >
+                      <PhoneOff className="h-4 w-4" />
+                      Akhiri percakapan
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

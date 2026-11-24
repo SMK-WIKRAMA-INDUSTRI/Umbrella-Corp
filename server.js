@@ -13,6 +13,13 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const HOSPITAL_ASSISTANT = JSON.parse(
+  fs.readFileSync(
+    path.join(__dirname, "src", "data", "hospitalAssistantPrompt.json"),
+    "utf-8",
+  ),
+);
+const HOSPITAL_ASSISTANT_PROMPT = HOSPITAL_ASSISTANT.systemPrompt.join("\n");
 
 // 1. Zero-dependency .env loader for server-side secrets
 function loadEnv() {
@@ -42,10 +49,7 @@ const OPENROUTER_API_KEY =
   process.env.OPENROUTER_API_KEY || process.env.VITE_OPENROUTER_API_KEY || "";
 const GEMINI_API_KEY =
   process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || "";
-const DEEPGRAM_API_KEY =
-  process.env.DEEPGRAM_API_KEY ||
-  process.env.VITE_DEEPGRAM_API_KEY ||
-  "60a13af1a04287bdd70caf432f6b6b76ccbcbbc5";
+const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY || "";
 
 // 2. Sliding Window Rate Limiter (Protects against Denial of Service / Denial of Wallet)
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
@@ -91,82 +95,144 @@ setInterval(
   5 * 60 * 1000,
 );
 
-// 3. Hospital Knowledge Context (Server-Side)
-const HOSPITAL_CONTEXT = `RS PT Umbrella Corp (RS Umbrella Care & Advanced Diagnostic Center) memiliki fasilitas rawat inap VIP (Paviliun Aster & Melati) dengan fasilitas Smart Monitor telemetri pasien, bed elektrik terpadu, kamar mandi dalam dengan pemanas air, dan sofa bed penunggu keluarga. Tarif kamar VIP: Rp 1.650.000 / malam (saat ini tersedia 4 Bed di Aster dan 2 Bed di Melati).
+// Local retrieval keeps known hospital answers available when no LLM provider responds.
+const knowledgeStart = HOSPITAL_ASSISTANT.systemPrompt.indexOf(
+  "BASIS PENGETAHUAN RESMI",
+);
+const knowledgeEnd = HOSPITAL_ASSISTANT.systemPrompt.indexOf(
+  "H. HAL YANG TIDAK BOLEH DIKLAIM",
+);
+const hospitalKnowledgeLines = HOSPITAL_ASSISTANT.systemPrompt.slice(
+  knowledgeStart + 1,
+  knowledgeEnd,
+);
+const normalizeKnowledgeText = (text) =>
+  text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 
-Instalasi Gawat Darurat (IGD) siaga 24 Jam dengan sistem triase merah/kuning/hijau didampingi tim dokter spesialis kedaruratan medik. Hotline rujukan darurat IGD: 021-8065-9911. Panggilan ambulans darurat: 119.
-
-Pendaftaran poliklinik dibuka setiap Senin - Sabtu pukul 08:00 - 21:00 WIB. Hari Minggu poliklinik rawat jalan tutup, namun Instalasi Gawat Darurat (IGD) dan rawat inap tetap beroperasi penuh 24 jam non-stop.
-
-Jadwal Dokter Spesialis:
-- dr. Budi Santoso, Sp.PD (Spesialis Penyakit Dalam): Senin, Rabu, Jumat pukul 09:00 - 13:00 WIB di Poli Internis Ruang 201.
-- dr. Rina Puspita, Sp.A(K) (Spesialis Anak): Senin, Selasa, Kamis, Sabtu pukul 15:00 - 19:30 WIB di Poli Anak Ruang 105.
-- dr. Andi Kurniawan, Sp.JP (Spesialis Jantung): Sedang cuti dinas, digantikan oleh dr. Ratna Dewi, Sp.JP di Ruang 302 (pukul 16:00 - 20:30 WIB).
-- dr. Farhan Malik, Sp.OG (Spesialis Kebidanan & Kandungan): Senin, Rabu, Kamis, Jumat pukul 13:00 - 17:00 WIB di Poli Obgyn Ruang 210.
-- dr. Hendra Wijaya, Sp.B (Spesialis Bedah Digestif): Selasa, Kamis, Sabtu pukul 10:00 - 14:00 WIB di Poli Bedah Ruang 205.
-
-Penjaminan BPJS Kesehatan & Asuransi Swasta:
-- Pasien non-darurat berobat jalan wajib membawa Surat Rujukan Online dari Faskes Tingkat 1 (Puskesmas/Klinik Pratama) yang masih berlaku (maksimal 90 hari) dan KTP/KIS.
-- Pasien gawat darurat (sesak napas parah, kejang, nyeri dada akut, hilang kesadaran, trauma) BEBAS SURAT RUJUKAN dan langsung ditangani di IGD.
-- Menerima klaim cashless asuransi swasta: Prudential (PRUmedical Priority Desk), AdMedika, Mandiri Inhealth, Allianz, AIA, Manulife, Sinarmas MSIG, Astra Life, Sequis Life.`;
-
-// 4. In-Memory Fast Cache for Common Questions (Zero-latency instant responses)
 function checkInstantKnowledgeCache(query) {
-  const q = query.toLowerCase();
+  const normalizedQuery = normalizeKnowledgeText(query);
+  const isEmergency = /\b(sesak|nyeri dada|kejang|pingsan|hilang kesadaran|trauma berat|henti napas|darurat|ambulans|igd)\b/.test(
+    normalizedQuery,
+  );
 
-  if (
-    (q.includes("tarif") || q.includes("biaya") || q.includes("kamar")) &&
-    (q.includes("vip") || q.includes("aster") || q.includes("melati"))
-  ) {
-    return `### Ketersediaan & Tarif Kamar Rawat Inap VIP RS Umbrella Corp\n\n- **Tarif Kamar VIP:** **Rp 1.650.000 / malam**\n- **Ketersediaan Live:**\n  - **Paviliun Aster:** Tersedia **4 Bed** (Lantai 5)\n  - **Paviliun Melati:** Tersedia **2 Bed** (Lantai 4)\n- **Fasilitas VIP:** 1 Bed Pasien Elektrik Parametric, Kamar Mandi Dalam Air Panas/Dingin, Sofa Bed Penunggu, Smart TV 43 Inch, AC Split + Air Purifier HEPA H13, Kulkas Medis, dan Jatah Konsumsi Penunggu 1x Sehari.\n- **Informasi Reservasi:** Hubungi Admission Desk di **(021) 8065-0000** atau kunjungi Loket Pendaftaran Lt. 1.`;
+  if (isEmergency) {
+    return "IGD RS Umbrella tercatat beroperasi 24 jam. Untuk keadaan darurat, segera hubungi hotline IGD **+62 21 8065 9911** atau ambulans nasional **119**. Asisten ini tidak dapat menilai kondisi medis melalui chat.";
   }
 
-  if (
-    q.includes("ambulans") ||
-    q.includes("darurat") ||
-    q.includes("igd") ||
-    q.includes("hotline") ||
-    q.includes("emergency")
-  ) {
-    return `🚨 **LAYANAN KEDARURATAN MEDIS 24 JAM RS UMBRELLA CORP**\n\n- **Hotline Darurat IGD 24 Jam:** **(021) 8065-9911**\n- **Panggilan Ambulans Siaga:** **119** atau **(021) 8065-9999**\n- **Alur Triase Darurat:**\n  - Pasien dengan kondisi gawat darurat (sesak napas berat, nyeri dada menusuk, kejang, cedera/trauma, hilang kesadaran) **BEBAS SURAT RUJUKAN BPJS** dan langsung ditangani di ruang resusitasi/IGD 24 jam.\n  - Lokasi IGD: Gedung Utama Lantai 1 (Akses langsung Drop-Off Ambulans).`;
+  if (/^(halo|hai|hi|hello|selamat pagi|selamat siang|selamat sore|selamat malam)$/.test(normalizedQuery)) {
+    return "Halo! Saya dapat membantu informasi layanan, jadwal, fasilitas, dan administrasi RS Umbrella. Apa yang ingin Anda ketahui?";
   }
 
-  if (
-    q.includes("anak") &&
-    (q.includes("dokter") || q.includes("jadwal") || q.includes("spesialis"))
-  ) {
-    return `### Jadwal Praktik Dokter Spesialis Anak (Pediatri)\n\n- **Dokter:** **dr. Rina Puspita, Sp.A(K)**\n- **Hari Praktik:** **Senin, Selasa, Kamis, Sabtu**\n- **Jam Praktik:** **15:00 - 19:30 WIB**\n- **Lokasi Poliklinik:** Ruang 105 (Poliklinik Anak, Lantai 1)\n- **Pendaftaran:** Buka pukul 08:00 - 20:00 WIB (Kuota tersedia untuk pasien umum dan rujukan BPJS Kesehatan).`;
+  const isHospitalQuestion =
+    /\b(rs|rumah sakit|umbrella|dokter|dr|spesialis|poli|poliklinik|kamar|rawat inap|bed|ranjang|paviliun|vip|vvip|igd|bpjs|asuransi|klaim|lab|laboratorium|radiologi|rontgen|usg|ct scan|ambulans|rujukan|alamat|call center|whatsapp|nicu|icu|isolasi|tarif)\b/.test(
+      normalizedQuery,
+    );
+  if (!isHospitalQuestion || knowledgeStart < 0 || knowledgeEnd < 0) {
+    return null;
   }
 
-  // Generic Doctor & Schedule Query
-  if (
-    (q.includes("dokter") || q.includes("spesialis") || q.includes("jadwal")) &&
-    (q.includes("apa") || q.includes("daftar") || q.includes("siapa") || q.includes("semua") || q.includes("ada") || q.includes("jadwal") || q.includes("list"))
-  ) {
-    return `### Daftar & Jadwal Praktik Dokter Spesialis RS Umbrella Corp\n\n` +
-      `- **dr. Budi Santoso, Sp.PD** (Spesialis Penyakit Dalam)\n  - Hari: **Senin, Rabu, Jumat** (09:00 - 13:00 WIB)\n  - Lokasi: Poli Internis Ruang 201\n\n` +
-      `- **dr. Rina Puspita, Sp.A(K)** (Spesialis Anak)\n  - Hari: **Senin, Selasa, Kamis, Sabtu** (15:00 - 19:30 WIB)\n  - Lokasi: Poli Anak Ruang 105\n\n` +
-      `- **dr. Ratna Dewi, Sp.JP** (Spesialis Jantung - *Pengganti dr. Andi Kurniawan yang sedang cuti dinas*)\n  - Hari: **Senin - Sabtu** (16:00 - 20:30 WIB)\n  - Lokasi: Ruang 302\n\n` +
-      `- **dr. Farhan Malik, Sp.OG** (Spesialis Kebidanan & Kandungan)\n  - Hari: **Senin, Rabu, Kamis, Jumat** (13:00 - 17:00 WIB)\n  - Lokasi: Poli Obgyn Ruang 210\n\n` +
-      `- **dr. Hendra Wijaya, Sp.B** (Spesialis Bedah Digestif)\n  - Hari: **Selasa, Kamis, Sabtu** (10:00 - 14:00 WIB)\n  - Lokasi: Poli Bedah Ruang 205\n\n` +
-      `*Pendaftaran Poliklinik dibuka Senin - Sabtu pukul 08:00 - 21:00 WIB. Layanan IGD siaga 24 Jam.*`;
+  const queryTerms = [
+    ...new Set(
+      normalizedQuery
+        .split(" ")
+        .filter(
+          (term) =>
+            term.length > 2 &&
+            ![
+              "berapa",
+              "bagaimana",
+              "apakah",
+              "kapan",
+              "dimana",
+              "dimana",
+              "yang",
+              "dan",
+              "atau",
+              "untuk",
+              "dari",
+              "dengan",
+              "pada",
+              "saya",
+              "ingin",
+              "tolong",
+              "bisa",
+              "kah",
+              "nya",
+              "ada",
+              "ini",
+              "itu",
+              "rs",
+              "rumah",
+              "sakit",
+              "umbrella",
+            ].includes(term),
+        ),
+    ),
+  ];
+  const stopWords = new Set(["dokter", "spesialis", "jadwal", "praktik", "poli"]);
+  const detailTerms = queryTerms.filter((term) => !stopWords.has(term));
+  if (detailTerms.length === 0) return null;
+
+  const doctorNames = ["budi", "rina", "andi", "ratna", "farhan", "hendra", "jessica", "nadia"];
+  const specialties = [
+    "anak",
+    "penyakit dalam",
+    "internis",
+    "jantung",
+    "obgyn",
+    "kandungan",
+    "digestif",
+    "saraf",
+    "neurologi",
+    "kulit",
+  ];
+  const asksForAllDoctors =
+    /\b(dokter|dr|spesialis)\b/.test(normalizedQuery) &&
+    /\b(semua|daftar|list)\b/.test(normalizedQuery) &&
+    !doctorNames.some((name) => normalizedQuery.includes(name)) &&
+    !specialties.some((specialty) => normalizedQuery.includes(specialty));
+
+  if (asksForAllDoctors) {
+    const doctorEntries = hospitalKnowledgeLines.filter((line) =>
+      /^\d+\.\s+dr\./i.test(line),
+    );
+    return doctorEntries.join("\n\n");
   }
 
-  if (
-    (q.includes("penyakit dalam") || q.includes("internis")) &&
-    (q.includes("dokter") || q.includes("jadwal"))
-  ) {
-    return `### Jadwal Praktik Dokter Spesialis Penyakit Dalam (Internis)\n\n- **Dokter:** **dr. Budi Santoso, Sp.PD**\n- **Hari Praktik:** **Senin, Rabu, Jumat**\n- **Jam Praktik:** **09:00 - 13:00 WIB**\n- **Lokasi Poliklinik:** Ruang 201 (Poliklinik Internis, Lantai 2)\n- **Pendaftaran:** Wajib membawa surat rujukan Faskes 1 bagi peserta BPJS Kesehatan aktif.`;
-  }
+  const scoredLines = hospitalKnowledgeLines
+    .filter((line) => line.length >= 40 && !/^[A-H]\./.test(line))
+    .map((line) => {
+      const normalizedLine = normalizeKnowledgeText(line);
+      const lineTerms = new Set(normalizedLine.split(" "));
+      const score = detailTerms.reduce(
+        (total, term) => total + (lineTerms.has(term) ? 1 : 0),
+        0,
+      );
+      return { line, score };
+    })
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score);
 
-  if (
-    q.includes("bpjs") &&
-    (q.includes("syarat") || q.includes("rujukan") || q.includes("alur"))
-  ) {
-    return `### Alur & Persyaratan Pelayanan BPJS Kesehatan di RS Umbrella\n\n1. **Pelayanan Rawat Jalan (Poliklinik):**\n   - Wajib membawa **Surat Rujukan Online (PCare/Mobile JKN)** dari Faskes Tingkat 1 (Puskesmas / Klinik Pratama) yang masih berlaku (maksimal 90 hari).\n   - Membawa e-KTP / Kartu Indonesia Sehat (KIS).\n2. **Pelayanan Gawat Darurat (IGD 24 Jam):**\n   - **TIDAK MEMERLUKAN SURAT RUJUKAN** untuk kasus gawat darurat sesuai kriteria medis BPJS Kesehatan.\n   - Langsung mendatangi IGD RS Umbrella Corp di (021) 8065-9911.`;
-  }
+  if (scoredLines.length === 0) return null;
 
-  return null;
+  const bestScore = scoredLines[0].score;
+  const answers = scoredLines
+    .filter(({ score }) => score === bestScore)
+    .slice(0, 3)
+    .map(({ line }) => line);
+  const includesRoomInformation = answers.some((line) =>
+    /\b(vvip|vip|kelas 1|kelas 2|kelas 3|icu|nicu|isolasi)\b/i.test(line),
+  );
+  const inventoryNote = includesRoomInformation
+    ? "\n\nCatatan: angka tarif dan ketersediaan di atas adalah data yang tercatat pada aplikasi, bukan konfirmasi live. Silakan hubungi Pusat Informasi RS di **(021) 8065-0000** untuk memastikan."
+    : "";
+
+  return `${answers.join("\n\n")}${inventoryNote}`;
 }
 
 // 5. Secure AI Dispatcher with AbortController Timeout (Always Route to Real AI)
@@ -175,26 +241,7 @@ async function requestAICompletion(
   chatHistory = [],
   clientApiKey = "",
 ) {
-  const systemPrompt = `IDENTITAS RESMI:
-Anda adalah "Umbrella AI Assistant", sistem asisten kecerdasan buatan resmi Rumah Sakit PT Umbrella Corp (RS Umbrella Care & Advanced Diagnostic Center).
-
-KEJUJURAN & TRANSPARANSI IDENTITAS:
-- Bersikaplah ramah, sopan, profesional, dan empatik.
-- Jelaskan informasi secara jelas, terstruktur, dan mudah dipahami pasien serta keluarganya.
-
-HIMBAUAN KESELAMATAN MEDIS WAJIB:
-1. INFORMASI OPERASIONAL BUKAN DIAGNOSIS: Respon Anda bersifat informatif operasional dan administratif rumah sakit, BUKAN pengganti diagnosis medis resmi atau pemeriksaan fisik langsung oleh dokter.
-2. LARANGAN OBAT KERAS: Dilarang meresepkan antibiotik atau obat keras tanpa resep dokter resmi.
-3. KEDARURATAN MEDIS: Bila pengguna menyebutkan tanda bahaya/darurat (sesak napas akut, nyeri dada menusuk, kejang, hilang kesadaran, trauma fisik berat), ingatkan dengan tegas agar SEGERA menuju IGD 24 Jam RS Umbrella (Hotline: 021-8065-9911) atau hubungi ambulans darurat 119.
-
-SUMBER DATA RESMI RUMAH SAKIT (ACUAN UTAMA):
-${HOSPITAL_CONTEXT}
-
-ATURAN FORMAT JAWABAN:
-- Gunakan Bahasa Indonesia sepenuhnya.
-- Format rapi: gunakan huruf tebal (**teks penting**) untuk nama dokter, poli, tarif, dan nomor telepon. Hindari penggunaan tanda pagar (seperti ### atau ##) pada judul, cukup gunakan baris baru atau teks tebal agar tidak mengotori teks saat dicopy.
-- Gunakan poin daftar (bullet points) untuk memudahkan pembacaan cepat.
-- Jika ada hal yang belum tercatat di data konteks, sampaikan dengan transparan bahwa sistem AI belum memiliki data tersebut dan sarankan menghubungi Pusat Informasi RS di 021-8065-0000.`;
+  const systemPrompt = HOSPITAL_ASSISTANT_PROMPT;
 
   const messagesPayload = [
     { role: "system", content: systemPrompt },
@@ -333,15 +380,14 @@ ATURAN FORMAT JAWABAN:
     }
   }
 
+  const localAnswer = checkInstantKnowledgeCache(userQuery);
+  if (localAnswer) {
+    return { text: localAnswer, source: "hospital-knowledge" };
+  }
+
   // Graceful Fallback if APIs are offline or unconfigured
   return {
-    text: `⚠️ **KUNCI API LLM DIPERLUKAN**: Agar asisten AI dapat menjawab secara live dan cerdas menggunakan data resmi RS Umbrella, mohon masukkan kunci API AI ke file **.env**:
-
-1. **Google Gemini API Key** (Format: \`AIzaSy...\`)
-2. **DeepSeek API Key** (Format: \`sk-...\`)
-3. **OpenRouter API Key** (Format: \`sk-or-v1-...\`)
-
-*Catatan: Kunci API yang Anda masukkan sebelumnya (\`60a13af1a042...\`) adalah kunci **Deepgram** yang digunakan khusus untuk fitur **Speech-to-Text (suara ke teks)**, bukan untuk model pembuat teks (LLM).*`,
+    text: `Maaf, Asisten AI belum dapat memproses pertanyaan saat ini. Untuk informasi layanan RS, silakan hubungi Pusat Informasi di **${HOSPITAL_ASSISTANT.callCenter}**. Untuk keadaan darurat, hubungi IGD **021-8065-9911** atau ambulans **119**.`,
     source: "fallback-system",
   };
 }
@@ -492,6 +538,17 @@ const server = http.createServer(async (req, res) => {
 
   // API Route: Speech-to-Text Transcription (Deepgram Nova-2 Indonesian Engine)
   if (req.url.startsWith("/api/stt") && req.method === "POST") {
+    if (!DEEPGRAM_API_KEY) {
+      res.writeHead(503, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          error: "DEEPGRAM_NOT_CONFIGURED",
+          message: "Layanan transkripsi suara belum dikonfigurasi.",
+        }),
+      );
+      return;
+    }
+
     if (isRateLimited(clientIp)) {
       res.writeHead(429, { "Content-Type": "application/json" });
       res.end(

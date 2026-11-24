@@ -5,9 +5,8 @@
  * - Didukung oleh Web Speech API (Native id-ID) & Deepgram Nova-2 (Indonesian Cloud Engine)
  */
 
-const FALLBACK_DEEPGRAM_KEY = '60a13af1a04287bdd70caf432f6b6b76ccbcbbc5';
-
 export interface SmartSTTOptions {
+  forceDeepgram?: boolean;
   onInterimResult?: (interimText: string) => void;
   onFinalResult: (finalText: string) => void;
   onStateChange: (state: 'listening' | 'transcribing' | 'idle', message?: string) => void;
@@ -45,23 +44,22 @@ export function getSupportedAudioMimeType(): string {
 }
 
 /**
- * Mengirimkan rekaman audio Blob ke Backend Proxy (/api/stt) atau langsung ke Deepgram Nova-2.
+ * Mengirimkan rekaman audio ke Backend Proxy agar API key Deepgram tetap di server.
  */
 export async function transcribeAudio(audioBlob: Blob): Promise<string> {
   if (!audioBlob || audioBlob.size === 0) {
-    return '';
+    throw new Error('Rekaman audio kosong.');
   }
 
-  // 1. Coba kirim via Secure Backend Proxy (/api/stt)
+  let mime = (audioBlob.type || 'audio/webm').split(';')[0];
+  if (!mime || mime === 'application/octet-stream') mime = 'audio/webm';
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+  let response: Response;
+
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
-
-    // Normalisasi content type untuk Deepgram
-    let mime = (audioBlob.type || 'audio/webm').split(';')[0];
-    if (!mime || mime === 'application/octet-stream') mime = 'audio/webm';
-
-    const response = await fetch('/api/stt', {
+    response = await fetch('/api/stt', {
       method: 'POST',
       signal: controller.signal,
       headers: {
@@ -69,53 +67,27 @@ export async function transcribeAudio(audioBlob: Blob): Promise<string> {
       },
       body: audioBlob,
     });
-
-    clearTimeout(timeoutId);
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data && typeof data.transcript === 'string') {
-        return data.transcript.trim();
-      }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('Permintaan transkripsi Deepgram melewati batas waktu.');
     }
-  } catch (proxyErr) {
-    console.warn('Backend proxy /api/stt error, falling back to direct Deepgram:', proxyErr);
+    throw new Error('Tidak dapat menghubungi backend transkripsi Deepgram.');
+  } finally {
+    clearTimeout(timeoutId);
   }
 
-  // 2. Direct Fallback ke Deepgram API jika backend proxy sedang offline
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
-
-    let mime = (audioBlob.type || 'audio/webm').split(';')[0];
-    if (!mime || mime === 'application/octet-stream') mime = 'audio/webm';
-
-    const directResponse = await fetch(
-      'https://api.deepgram.com/v1/listen?model=nova-2&language=id&smart_format=true&punctuate=true',
-      {
-        method: 'POST',
-        signal: controller.signal,
-        headers: {
-          Authorization: `Token ${FALLBACK_DEEPGRAM_KEY}`,
-          'Content-Type': mime,
-        },
-        body: audioBlob,
-      }
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(
+      data?.message || `Layanan transkripsi gagal (HTTP ${response.status}).`,
     );
-
-    clearTimeout(timeoutId);
-
-    if (directResponse.ok) {
-      const dgData = await directResponse.json();
-      const transcript =
-        dgData.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
-      return transcript.trim();
-    }
-  } catch (fallbackErr) {
-    console.warn('Direct Deepgram STT failed:', fallbackErr);
   }
 
-  return '';
+  const data = await response.json();
+  if (!data || typeof data.transcript !== 'string') {
+    throw new Error('Backend transkripsi tidak mengembalikan teks.');
+  }
+  return data.transcript.trim();
 }
 
 /**
@@ -164,7 +136,7 @@ export async function startSmartSpeechRecognition(options: SmartSTTOptions): Pro
       ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)) ||
     null;
 
-  if (SpeechRecognitionClass) {
+  if (SpeechRecognitionClass && !options.forceDeepgram) {
     try {
       const rec = new SpeechRecognitionClass();
       recognitionInstance = rec;
@@ -361,7 +333,7 @@ export async function startSmartSpeechRecognition(options: SmartSTTOptions): Pro
           console.error('STT process error:', err);
           options.onStateChange('idle');
           if (options.onError) {
-            options.onError('Gagal memproses suara. Pastikan mikrofon aktif.');
+            options.onError(err?.message || 'Gagal memproses suara.');
           }
         }
       };

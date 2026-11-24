@@ -1,27 +1,11 @@
-import { HOSPITAL_METADATA } from '../data/hospitalData';
+import hospitalAssistantPrompt from '../data/hospitalAssistantPrompt.json';
 
 // Konfigurasi Klien & Kompatibilitas
 export const DEFAULT_DEEPSEEK_MODEL = 'deepseek-chat';
 export const DEFAULT_OPENROUTER_MODEL = 'deepseek/deepseek-chat';
 export const DEFAULT_GEMINI_MODEL = 'deepseek-chat';
 
-export const DEFAULT_HOSPITAL_CONTEXT = `RS PT Umbrella Corp (RS Umbrella Care & Advanced Diagnostic Center) memiliki fasilitas rawat inap VIP (Paviliun Aster & Melati) dengan fasilitas Smart Monitor telemetri pasien, bed elektrik terpadu, kamar mandi dalam dengan pemanas air, dan sofa bed penunggu keluarga. Tarif kamar VIP: Rp 1.650.000 / malam (saat ini tersedia 4 Bed di Aster dan 2 Bed di Melati).
-
-Instalasi Gawat Darurat (IGD) siaga 24 Jam dengan sistem triase merah/kuning/hijau didampingi tim dokter spesialis kedaruratan medik. Hotline rujukan darurat IGD: 021-8065-9911. Panggilan ambulans darurat: 119.
-
-Pendaftaran poliklinik dibuka setiap Senin - Sabtu pukul 08:00 - 21:00 WIB. Hari Minggu poliklinik rawat jalan tutup, namun Instalasi Gawat Darurat (IGD) dan rawat inap tetap beroperasi penuh 24 jam non-stop.
-
-Jadwal Dokter Spesialis:
-- dr. Budi Santoso, Sp.PD (Spesialis Penyakit Dalam): Senin, Rabu, Jumat pukul 09:00 - 13:00 WIB di Poli Internis Ruang 201.
-- dr. Rina Puspita, Sp.A(K) (Spesialis Anak): Senin, Selasa, Kamis, Sabtu pukul 15:00 - 19:30 WIB di Poli Anak Ruang 105.
-- dr. Andi Kurniawan, Sp.JP (Spesialis Jantung): Sedang cuti dinas, digantikan oleh dr. Ratna Dewi, Sp.JP di Ruang 302 (pukul 16:00 - 20:30 WIB).
-- dr. Farhan Malik, Sp.OG (Spesialis Kebidanan & Kandungan): Senin, Rabu, Kamis, Jumat pukul 13:00 - 17:00 WIB di Poli Obgyn Ruang 210.
-- dr. Hendra Wijaya, Sp.B (Spesialis Bedah Digestif): Selasa, Kamis, Sabtu pukul 10:00 - 14:00 WIB di Poli Bedah Ruang 205.
-
-Penjaminan BPJS Kesehatan & Asuransi Swasta:
-- Pasien non-darurat berobat jalan wajib membawa Surat Rujukan Online dari Faskes Tingkat 1 (Puskesmas/Klinik Pratama) yang masih berlaku (maksimal 90 hari) dan KTP/KIS.
-- Pasien gawat darurat (sesak napas parah, kejang, nyeri dada akut, hilang kesadaran, trauma) BEBAS SURAT RUJUKAN dan langsung ditangani di IGD.
-- Menerima klaim cashless asuransi swasta: Prudential (PRUmedical Priority Desk), AdMedika, Mandiri Inhealth, Allianz, AIA, Manulife, Sinarmas MSIG, Astra Life, Sequis Life.`;
+export const DEFAULT_HOSPITAL_CONTEXT = hospitalAssistantPrompt.systemPrompt.join('\n');
 
 export interface GeminiCallOptions {
   userQuery: string;
@@ -110,7 +94,7 @@ export async function callOpenRouterLive({
                 { role: 'user', parts: [{ text: trimmedQuery }] },
               ],
               systemInstruction: {
-                parts: [{ text: `Anda adalah Umbrella AI Assistant resmi RS PT Umbrella Corp.\nData Panduan Resmi:\n${systemContext}` }],
+                parts: [{ text: systemContext }],
               },
               generationConfig: { temperature: 0.3, maxOutputTokens: 1000 },
             }),
@@ -147,7 +131,7 @@ export async function callOpenRouterLive({
           messages: [
             {
               role: 'system',
-              content: `Anda adalah Umbrella AI Assistant resmi RS PT Umbrella Corp.\nData Panduan:\n${systemContext}`,
+              content: systemContext,
             },
             ...chatHistory.slice(-4).map((m) => ({
               role: m.role === 'model' || m.role === 'assistant' ? 'assistant' : 'user',
@@ -173,7 +157,7 @@ export async function callOpenRouterLive({
   }
 
   // Don't present generic hospital information as if it answered the user's question.
-  return '⚠️ Maaf, layanan AI belum dapat memproses pertanyaan ini. Jawaban generik tidak ditampilkan agar tidak menyesatkan. Silakan coba lagi beberapa saat atau hubungi Call Center RS di **(021) 8065-0000**.';
+  return `⚠️ Maaf, layanan AI belum dapat memproses pertanyaan ini. Jawaban generik tidak ditampilkan agar tidak menyesatkan. Silakan coba lagi beberapa saat atau hubungi Call Center RS di **${hospitalAssistantPrompt.callCenter}**.`;
 }
 
 // Alias fungsi untuk kompatibilitas
