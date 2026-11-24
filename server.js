@@ -136,6 +136,20 @@ function checkInstantKnowledgeCache(query) {
     return `### Jadwal Praktik Dokter Spesialis Anak (Pediatri)\n\n- **Dokter:** **dr. Rina Puspita, Sp.A(K)**\n- **Hari Praktik:** **Senin, Selasa, Kamis, Sabtu**\n- **Jam Praktik:** **15:00 - 19:30 WIB**\n- **Lokasi Poliklinik:** Ruang 105 (Poliklinik Anak, Lantai 1)\n- **Pendaftaran:** Buka pukul 08:00 - 20:00 WIB (Kuota tersedia untuk pasien umum dan rujukan BPJS Kesehatan).`;
   }
 
+  // Generic Doctor & Schedule Query
+  if (
+    (q.includes("dokter") || q.includes("spesialis") || q.includes("jadwal")) &&
+    (q.includes("apa") || q.includes("daftar") || q.includes("siapa") || q.includes("semua") || q.includes("ada") || q.includes("jadwal") || q.includes("list"))
+  ) {
+    return `### Daftar & Jadwal Praktik Dokter Spesialis RS Umbrella Corp\n\n` +
+      `- **dr. Budi Santoso, Sp.PD** (Spesialis Penyakit Dalam)\n  - Hari: **Senin, Rabu, Jumat** (09:00 - 13:00 WIB)\n  - Lokasi: Poli Internis Ruang 201\n\n` +
+      `- **dr. Rina Puspita, Sp.A(K)** (Spesialis Anak)\n  - Hari: **Senin, Selasa, Kamis, Sabtu** (15:00 - 19:30 WIB)\n  - Lokasi: Poli Anak Ruang 105\n\n` +
+      `- **dr. Ratna Dewi, Sp.JP** (Spesialis Jantung - *Pengganti dr. Andi Kurniawan yang sedang cuti dinas*)\n  - Hari: **Senin - Sabtu** (16:00 - 20:30 WIB)\n  - Lokasi: Ruang 302\n\n` +
+      `- **dr. Farhan Malik, Sp.OG** (Spesialis Kebidanan & Kandungan)\n  - Hari: **Senin, Rabu, Kamis, Jumat** (13:00 - 17:00 WIB)\n  - Lokasi: Poli Obgyn Ruang 210\n\n` +
+      `- **dr. Hendra Wijaya, Sp.B** (Spesialis Bedah Digestif)\n  - Hari: **Selasa, Kamis, Sabtu** (10:00 - 14:00 WIB)\n  - Lokasi: Poli Bedah Ruang 205\n\n` +
+      `*Pendaftaran Poliklinik dibuka Senin - Sabtu pukul 08:00 - 21:00 WIB. Layanan IGD siaga 24 Jam.*`;
+  }
+
   if (
     (q.includes("penyakit dalam") || q.includes("internis")) &&
     (q.includes("dokter") || q.includes("jadwal"))
@@ -211,7 +225,7 @@ ATURAN FORMAT JAWABAN:
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: process.env.DEEPSEEK_MODEL || "deepseek/deepseek-chat",
+          model: process.env.OPENROUTER_MODEL || "deepseek/deepseek-chat",
           messages: messagesPayload,
           max_tokens: 800,
           temperature: 0.3,
@@ -300,6 +314,10 @@ const server = http.createServer(async (req, res) => {
   res.setHeader(
     "Permissions-Policy",
     "camera=(), microphone=(self), geolocation=()",
+  );
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://openrouter.ai https://api.deepseek.com https://*.supabase.co wss://*.supabase.co; frame-src 'self' https://www.google.com https://maps.google.com;",
   );
 
   // CORS - Restrictive default

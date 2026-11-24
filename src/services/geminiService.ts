@@ -52,7 +52,7 @@ export async function callOpenRouterLive({
   // 1. Coba hubungi Secure Backend Proxy (/api/chat)
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s max timeout
+    const timeoutId = setTimeout(() => controller.abort(), 35000); // 35s max timeout for deep reasoning
 
     const response = await fetch('/api/chat', {
       method: 'POST',
