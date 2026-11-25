@@ -51,8 +51,9 @@ const GEMINI_API_KEY =
   process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || "";
 const GEMINI_TTS_MODEL = process.env.GEMINI_TTS_MODEL || "gemini-3.8-flash-tts";
 const GEMINI_TTS_VOICE = process.env.GEMINI_TTS_VOICE || "Aoede";
-const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY || "";
-const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "flux-dewi-id";
+const DEEPGRAM_API_KEY =
+  process.env.DEEPGRAM_API_KEY || process.env.VITE_DEEPGRAM_API_KEY || "";
+const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "flux-fitri-id";
 
 // 2. Sliding Window Rate Limiter (Protects against Denial of Service / Denial of Wallet)
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
@@ -239,8 +240,8 @@ function checkInstantKnowledgeCache(query) {
 }
 
 const VOICE_CS_STYLE_INSTRUCTION = `
-MODE TELEPON CUSTOMER SERVICE REALISTIS (DEWI - RS PT UMBRELLA CORP):
-- Namamu Dewi, staf Customer Service RS PT Umbrella Corp yang sedang menerima telepon.
+MODE TELEPON CUSTOMER SERVICE REALISTIS (FITRI - RS PT UMBRELLA CORP):
+- Namamu Fitri, staf Customer Service RS PT Umbrella Corp yang sedang menerima telepon.
 - Bicaralah seperti manusia sungguhan di telepon: hangat, tenang, sopan, dan natural. Hindari gaya bahasa kaku seperti robot atau artikel (jangan pernah ucapkan "Berdasarkan data", "Berikut adalah informasi", "Perlu dicatat", atau "Sebagai asisten AI").
 - Gunakan sapaan sopan "Bapak atau Ibu" (atau "Anda") dengan alur bicara yang luwes, misalnya "Baik, untuk layanan tersebut...", "Untuk jadwalnya saat ini...", atau "Jika Bapak atau Ibu berkenan...".
 - Jawab langsung ke inti pertanyaan dalam dua sampai tiga kalimat pendek agar cepat dan enak didengar.

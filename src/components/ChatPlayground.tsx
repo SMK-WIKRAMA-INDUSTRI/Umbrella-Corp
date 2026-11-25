@@ -393,7 +393,7 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
     return chunks;
   };
 
-  const AGENT_NAME = 'Dewi';
+  const AGENT_NAME = 'Fitri';
   const INSTANT_CHECKING_LINE = 'Oke, baik Bapak atau Ibu, akan kami periksa dahulu ya.';
   const CHECKING_LINES = [INSTANT_CHECKING_LINE];
   const STILL_CHECKING_LINE = 'Mohon ditunggu sebentar lagi ya, masih kami periksa.';
@@ -426,13 +426,63 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
 
   const preloadLines = async () => {
     const lines = [...CHECKING_LINES, STILL_CHECKING_LINE, ...THANKS_FOR_WAITING_LINES];
-    await Promise.allSettled(
-      lines.map(async (line) => {
-        if (lineAudioRef.current.has(line)) return;
-        const blob = await synthesizeSpeech(line);
-        lineAudioRef.current.set(line, blob);
-      }),
-    );
+    await Promise.allSettled(lines.map((line) => getLineAudio(line)));
+  };
+
+  const getLineAudio = async (line: string): Promise<Blob> => {
+    const cached = lineAudioRef.current.get(line);
+    if (cached) return cached;
+    const blob = await synthesizeSpeech(line);
+    lineAudioRef.current.set(line, blob);
+    return blob;
+  };
+
+  const pauseListening = () => {
+    sttControllerRef.current?.pause?.();
+  };
+
+  const resumeListening = () => {
+    sttControllerRef.current?.resume?.();
+  };
+
+  const createAgentAudio = (blob: Blob): HTMLAudioElement => {
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.addEventListener('ended', () => URL.revokeObjectURL(url), { once: true });
+    audio.addEventListener('error', () => URL.revokeObjectURL(url), { once: true });
+    return audio;
+  };
+
+  const streamAudio = (response: Response): HTMLAudioElement => {
+    const mediaSource = new MediaSource();
+    const objectUrl = URL.createObjectURL(mediaSource);
+    const audio = new Audio(objectUrl);
+    mediaSource.addEventListener('sourceopen', async () => {
+      try {
+        const buffer = mediaSource.addSourceBuffer('audio/mpeg');
+        const reader = response.body!.getReader();
+        for (;;) {
+          if (!voiceCallActiveRef.current) break;
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer.appendBuffer(value);
+          await new Promise<void>((resolve) =>
+            buffer.addEventListener('updateend', () => resolve(), { once: true }),
+          );
+        }
+        if (mediaSource.readyState === 'open') {
+          mediaSource.endOfStream();
+        }
+      } catch {
+        if (mediaSource.readyState === 'open') {
+          try {
+            mediaSource.endOfStream('network');
+          } catch (_) {}
+        }
+      }
+    }, { once: true });
+    audio.addEventListener('ended', () => URL.revokeObjectURL(objectUrl), { once: true });
+    return audio;
   };
 
   const playAudioElement = (audio: HTMLAudioElement, revokeUrl?: string): Promise<boolean> => {
@@ -471,9 +521,8 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
   };
 
   const playAudioBlob = (blob: Blob): Promise<boolean> => {
-    const audioUrl = URL.createObjectURL(blob);
-    const audio = new Audio(audioUrl);
-    return playAudioElement(audio, audioUrl);
+    const audio = createAgentAudio(blob);
+    return playAudioElement(audio);
   };
 
   const streamSpeechResponse = async (response: Response): Promise<boolean> => {
@@ -489,40 +538,18 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
       return playAudioBlob(blob);
     }
 
-    const mediaSource = new MediaSource();
-    const objectUrl = URL.createObjectURL(mediaSource);
-    const audio = new Audio(objectUrl);
+    const audio = streamAudio(response);
+    const played = await playAudioElement(audio);
+    if (played) return true;
 
-    mediaSource.addEventListener(
-      'sourceopen',
-      async () => {
-        try {
-          const buffer = mediaSource.addSourceBuffer('audio/mpeg');
-          const reader = response.body!.getReader();
-          for (;;) {
-            if (!voiceCallActiveRef.current) break;
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer.appendBuffer(value);
-            await new Promise<void>((resolve) =>
-              buffer.addEventListener('updateend', () => resolve(), { once: true }),
-            );
-          }
-          if (mediaSource.readyState === 'open') {
-            mediaSource.endOfStream();
-          }
-        } catch {
-          if (mediaSource.readyState === 'open') {
-            try {
-              mediaSource.endOfStream('network');
-            } catch (_) {}
-          }
-        }
-      },
-      { once: true },
-    );
-
-    return playAudioElement(audio, objectUrl);
+    // Fallback ke Blob jika streaming MediaSource gagal diputar
+    try {
+      const blob = await response.clone().blob();
+      const fallbackAudio = createAgentAudio(blob);
+      return await playAudioElement(fallbackAudio);
+    } catch {
+      return false;
+    }
   };
 
   const speakWithBrowserFallback = async (chunks: string[]): Promise<boolean> => {
@@ -572,6 +599,7 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
     fromCache = false,
     allowBargeIn = true,
   ): Promise<boolean> => {
+    pauseListening();
     const myTurnId = callTurnIdRef.current;
 
     if (allowBargeIn && voiceCallActiveRef.current) {
@@ -625,6 +653,7 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
       }
       return fallbackOk;
     } finally {
+      resumeListening();
       bargeInMonitorRef.current?.stop();
       bargeInMonitorRef.current = null;
     }
@@ -701,7 +730,7 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
     setVoiceCallError(null);
     try {
       const controller = await startSmartSpeechRecognition({
-        forceDeepgram: true,
+        forceDeepgram: false,
         onFinalResult: (transcript) => {
           void handleVoiceQuery(transcript);
         },

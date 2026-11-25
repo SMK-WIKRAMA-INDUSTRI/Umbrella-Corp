@@ -170,7 +170,7 @@
     </script>
     <script>
       const DEEPGRAM_LIVE_URL = 'wss://api.deepgram.com/v1/listen?model=nova-3&language=id&smart_format=true&interim_results=true&endpointing=500&utterance_end_ms=1000';
-      const DEEPGRAM_SPEAK_URL = 'https://api.deepgram.com/v2/speak?model=flux-fitri-id&encoding=mp3';
+      const DEEPGRAM_SPEAK_URL = 'https://api.deepgram.com/v2/speak?model=flux-fitri-id';
       const MAX_RECORDING_SECONDS = 60;
       const dictation = {};
       const call = {};
@@ -293,6 +293,11 @@
       const CALL_RULES = [
         `Namamu ${AGENT_NAME}.`,
         'Pelanggan sedang menelepon, jadi jawabanmu akan dibacakan dengan suara.',
+        'Bicaralah seperti customer service sungguhan: hangat, sopan, dan natural.',
+        'Jawab langsung ke inti dalam maksimal tiga kalimat pendek.',
+        'Jangan ulangi salam pembuka atau kalimat "akan kami periksa dahulu" karena sudah diucapkan sistem.',
+        'Tulis angka, jam, dan harga dengan huruf (misalnya "sepuluh ribu rupiah", "pukul sembilan pagi").',
+        'Jangan gunakan daftar, bullet point, tanda bintang, pagar, atau simbol lain.',
       ].join('\\n');
 
       function pauseListening() {
@@ -324,6 +329,13 @@
             if (mediaSource.readyState === 'open') mediaSource.endOfStream('network');
           }
         }, { once: true });
+        return audio;
+      }
+
+      function createAgentAudio(blob) {
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.addEventListener('ended', () => URL.revokeObjectURL(url), { once: true });
         return audio;
       }
 
@@ -360,10 +372,17 @@
             body: JSON.stringify({ text: reply }),
           });
           if (!ttsRes.ok) return;
-          const blob = await ttsRes.blob();
-          const audio = new Audio(URL.createObjectURL(blob));
+          let audio;
+          if (typeof MediaSource !== 'undefined' && MediaSource.isTypeSupported('audio/mpeg') && ttsRes.body) {
+            audio = streamAudio(ttsRes);
+          } else {
+            const blob = await ttsRes.blob();
+            audio = createAgentAudio(blob);
+          }
           await audio.play();
+          resumeListening();
         } catch (e) {
+          resumeListening();
           // abaikan error
         }
       }

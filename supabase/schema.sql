@@ -117,3 +117,126 @@ create policy "users_select_all"
   for select
   to anon, authenticated
   using (true);
+
+-- ============================================
+-- Chat Sessions & Messages (persistensi riwayat chat AI)
+-- ============================================
+
+create table if not exists public.chat_sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users (id) on delete cascade,
+  title text default 'Percakapan Baru',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists chat_sessions_user_idx on public.chat_sessions (user_id);
+create index if not exists chat_sessions_updated_idx on public.chat_sessions (updated_at desc);
+
+create table if not exists public.chat_messages (
+  id text primary key,
+  session_id uuid not null references public.chat_sessions (id) on delete cascade,
+  sender text not null check (sender in ('user', 'ai')),
+  text text not null,
+  timestamp text,
+  is_error boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists chat_messages_session_idx on public.chat_messages (session_id, created_at);
+
+alter table public.chat_sessions enable row level security;
+alter table public.chat_messages enable row level security;
+
+-- sessions: boleh dikelola oleh pemilik atau sesi anonim (user_id is null)
+drop policy if exists "chat_sessions_select" on public.chat_sessions;
+create policy "chat_sessions_select"
+  on public.chat_sessions
+  for select
+  to anon, authenticated
+  using (user_id is null or user_id = auth.uid());
+
+drop policy if exists "chat_sessions_insert" on public.chat_sessions;
+create policy "chat_sessions_insert"
+  on public.chat_sessions
+  for insert
+  to anon, authenticated
+  with check (user_id is null or user_id = auth.uid());
+
+drop policy if exists "chat_sessions_update" on public.chat_sessions;
+create policy "chat_sessions_update"
+  on public.chat_sessions
+  for update
+  to anon, authenticated
+  using (user_id is null or user_id = auth.uid())
+  with check (user_id is null or user_id = auth.uid());
+
+drop policy if exists "chat_sessions_delete" on public.chat_sessions;
+create policy "chat_sessions_delete"
+  on public.chat_sessions
+  for delete
+  to anon, authenticated
+  using (user_id is null or user_id = auth.uid());
+
+-- messages: akses mengikuti kepemilikan sesi
+drop policy if exists "chat_messages_select" on public.chat_messages;
+create policy "chat_messages_select"
+  on public.chat_messages
+  for select
+  to anon, authenticated
+  using (
+    exists (
+      select 1 from public.chat_sessions s
+      where s.id = chat_messages.session_id
+        and (s.user_id is null or s.user_id = auth.uid())
+    )
+  );
+
+drop policy if exists "chat_messages_insert" on public.chat_messages;
+create policy "chat_messages_insert"
+  on public.chat_messages
+  for insert
+  to anon, authenticated
+  with check (
+    exists (
+      select 1 from public.chat_sessions s
+      where s.id = chat_messages.session_id
+        and (s.user_id is null or s.user_id = auth.uid())
+    )
+  );
+
+drop policy if exists "chat_messages_update" on public.chat_messages;
+create policy "chat_messages_update"
+  on public.chat_messages
+  for update
+  to anon, authenticated
+  using (
+    exists (
+      select 1 from public.chat_sessions s
+      where s.id = chat_messages.session_id
+        and (s.user_id is null or s.user_id = auth.uid())
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.chat_sessions s
+      where s.id = chat_messages.session_id
+        and (s.user_id is null or s.user_id = auth.uid())
+    )
+  );
+
+drop policy if exists "chat_messages_delete" on public.chat_messages;
+create policy "chat_messages_delete"
+  on public.chat_messages
+  for delete
+  to anon, authenticated
+  using (
+    exists (
+      select 1 from public.chat_sessions s
+      where s.id = chat_messages.session_id
+        and (s.user_id is null or s.user_id = auth.uid())
+    )
+  );
+
+grant select, insert, update, delete on public.chat_sessions to anon, authenticated;
+grant select, insert, update, delete on public.chat_messages to anon, authenticated;

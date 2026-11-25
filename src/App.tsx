@@ -1,24 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LandingPage } from './components/LandingPage';
 import { PlaygroundHeader } from './components/PlaygroundHeader';
 import { ChatPlayground, ChatItem } from './components/ChatPlayground';
 import { TutorialModal } from './components/TutorialModal';
 import { SettingsPanel } from './components/SettingsPanel';
 import { AuthModal } from './components/AuthModal';
+import { useAuth } from './contexts/AuthContext';
 import {
   DEFAULT_GEMINI_MODEL,
   DEFAULT_HOSPITAL_CONTEXT,
   callGeminiLive,
 } from './services/geminiService';
 import { getCurrentWIB } from './services/chatEngine';
+import {
+  getOrCreateCurrentSession,
+  fetchSessionMessages,
+  persistMessage,
+  startNewSession,
+} from './services/chatSessionService';
 
 export const App: React.FC = () => {
+  const { user } = useAuth();
+
   // 1. Status Tampilan Navigasi: 'landing' (Beranda RS) atau 'chatbot' (AI Assistant)
   const [currentView, setCurrentView] = useState<'landing' | 'chatbot'>('landing');
 
   // 2. Daftar Pesan Percakapan (Bersih dari awal, siap menerima tanya-jawab pasien)
   const [messages, setMessages] = useState<ChatItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // Sesi chat persisten (Supabase / localStorage)
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const sid = await getOrCreateCurrentSession(user?.id ?? null);
+        if (!mounted) return;
+        setSessionId(sid);
+        const storedMessages = await fetchSessionMessages(sid);
+        if (!mounted) return;
+        setMessages(storedMessages);
+      } catch (e) {
+        console.error('Gagal memulihkan sesi chat:', e);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -32,11 +63,18 @@ export const App: React.FC = () => {
   // 3. Status Modal Panduan Penggunaan
   const [isTutorialOpen, setIsTutorialOpen] = useState<boolean>(false);
 
-  // Hapus riwayat percakapan di playground
-  const handleClearChat = () => {
+  // Hapus riwayat percakapan di playground (mulai sesi baru)
+  const handleClearChat = async () => {
     if (messages.length === 0) return;
     if (window.confirm('Hapus seluruh riwayat percakapan dengan Asisten AI?')) {
-      setMessages([]);
+      try {
+        const newSid = await startNewSession(user?.id ?? null);
+        setSessionId(newSid);
+        setMessages([]);
+      } catch (e) {
+        console.error('Gagal membuat sesi baru:', e);
+        setMessages([]);
+      }
     }
   };
 
@@ -54,6 +92,11 @@ export const App: React.FC = () => {
 
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
+
+    // Persist pesan pengguna ke sesi (tidak hilang saat refresh)
+    if (sessionId) {
+      void persistMessage(sessionId, userMessage);
+    }
 
     // 2. Panggil API Live Google Gemini (Kunci API & Konfigurasi otomatis dari ENV / Sistem)
     setIsLoading(true);
@@ -81,6 +124,9 @@ export const App: React.FC = () => {
       };
 
       setMessages((prev) => [...prev, aiMessage]);
+      if (sessionId) {
+        void persistMessage(sessionId, aiMessage);
+      }
       return aiText;
     } catch (error: any) {
       console.error('Gemini Live API Call Error:', error);
@@ -94,6 +140,9 @@ export const App: React.FC = () => {
       };
 
       setMessages((prev) => [...prev, errorMessage]);
+      if (sessionId) {
+        void persistMessage(sessionId, errorMessage);
+      }
       return errorMessage.text;
     } finally {
       setIsLoading(false);

@@ -72,6 +72,11 @@ export async function callOpenRouterLive({
     console.warn('Backend proxy /api/chat unreachable or timed out, trying resilient direct fallback...', proxyErr);
   }
 
+  const voiceStyleInstruction = voiceMode
+    ? '\n\nMODE TELEPON CUSTOMER SERVICE: Bicara natural, hangat, sopan. Jawab langsung ke inti maksimal tiga kalimat pendek. Jangan ulangi salam pembuka. Tulis angka, jam, harga dengan huruf. Tanpa daftar, bintang, atau simbol.'
+    : '';
+  const directSystemContext = `${systemContext}${voiceStyleInstruction}`;
+
   // 2. Resilient Direct Fallback (Jika backend offline atau dijalankan statis)
   // Single Model Call dengan Timeout Ketat (Maksimal 8 Detik) - Menghilangkan lag looping
   const directKey = (apiKey || '').trim();
@@ -97,7 +102,7 @@ export async function callOpenRouterLive({
                 { role: 'user', parts: [{ text: trimmedQuery }] },
               ],
               systemInstruction: {
-                parts: [{ text: systemContext }],
+                parts: [{ text: directSystemContext }],
               },
               generationConfig: { temperature: 0.3, maxOutputTokens: 1000 },
             }),
@@ -134,7 +139,7 @@ export async function callOpenRouterLive({
           messages: [
             {
               role: 'system',
-              content: systemContext,
+              content: directSystemContext,
             },
             ...chatHistory.slice(-4).map((m) => ({
               role: m.role === 'model' || m.role === 'assistant' ? 'assistant' : 'user',

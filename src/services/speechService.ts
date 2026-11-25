@@ -17,6 +17,8 @@ export interface SmartSTTController {
   stop: () => void;
   cancel: () => void;
   isListening: () => boolean;
+  pause?: () => void;
+  resume?: () => void;
 }
 
 /**
@@ -276,6 +278,14 @@ export async function startSmartSpeechRecognition(options: SmartSTTOptions): Pro
           options.onStateChange('idle');
         },
         isListening: () => active,
+        pause: () => {
+          if (recognitionInstance) {
+            try {
+              recognitionInstance.stop();
+            } catch (_) {}
+          }
+        },
+        resume: () => {},
       };
     } catch (e) {
       console.warn('Gagal menginisialisasi Web Speech API, fallback ke Deepgram VAD:', e);
@@ -412,6 +422,16 @@ export async function startSmartSpeechRecognition(options: SmartSTTOptions): Pro
           options.onStateChange('idle');
         },
         isListening: () => active,
+        pause: () => {
+          if (mediaStream) {
+            mediaStream.getTracks().forEach((track) => track.enabled = false);
+          }
+        },
+        resume: () => {
+          if (mediaStream) {
+            mediaStream.getTracks().forEach((track) => track.enabled = true);
+          }
+        },
       };
     } catch (err: any) {
       cleanup();
