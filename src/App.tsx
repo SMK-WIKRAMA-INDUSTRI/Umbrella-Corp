@@ -41,7 +41,7 @@ export const App: React.FC = () => {
   };
 
   // Kirim pertanyaan ke Gemini AI
-  const handleSendMessage = async (queryText: string) => {
+  const handleSendMessage = async (queryText: string): Promise<string> => {
     const timestamp = getCurrentWIB();
 
     // 1. Tambahkan Pesan Pasien/Pengguna
@@ -59,7 +59,7 @@ export const App: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const historyForAPI = updatedMessages.map((m) => ({
+      const historyForAPI = messages.map((m) => ({
         role: m.sender === 'user' ? ('user' as const) : ('model' as const),
         text: m.text,
       }));
@@ -81,6 +81,7 @@ export const App: React.FC = () => {
       };
 
       setMessages((prev) => [...prev, aiMessage]);
+      return aiText;
     } catch (error: any) {
       console.error('Gemini Live API Call Error:', error);
 
@@ -93,6 +94,7 @@ export const App: React.FC = () => {
       };
 
       setMessages((prev) => [...prev, errorMessage]);
+      return errorMessage.text;
     } finally {
       setIsLoading(false);
     }
