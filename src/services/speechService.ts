@@ -15,6 +15,7 @@ export interface SmartSTTOptions {
 
 export interface SmartSTTController {
   stop: () => void;
+  cancel: () => void;
   isListening: () => boolean;
 }
 
@@ -88,6 +89,51 @@ export async function transcribeAudio(audioBlob: Blob): Promise<string> {
     throw new Error('Backend transkripsi tidak mengembalikan teks.');
   }
   return data.transcript.trim();
+}
+
+/**
+ * Mengubah teks jawaban AI menjadi stream audio suara melalui Deepgram TTS (/api/tts).
+ */
+export async function synthesizeSpeechResponse(text: string): Promise<Response> {
+  const cleaned = text.trim();
+  if (!cleaned) {
+    throw new Error('Teks suara kosong.');
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch('/api/tts', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text: cleaned }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw new Error(data?.message || `Layanan suara Deepgram gagal (HTTP ${response.status}).`);
+    }
+
+    return response;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('Permintaan suara Deepgram melewati batas waktu.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Mengubah teks jawaban AI menjadi audio Blob melalui Deepgram TTS (/api/tts).
+ */
+export async function synthesizeSpeech(text: string): Promise<Blob> {
+  const response = await synthesizeSpeechResponse(text);
+  return await response.blob();
 }
 
 /**
@@ -225,6 +271,10 @@ export async function startSmartSpeechRecognition(options: SmartSTTOptions): Pro
           cleanup();
           options.onStateChange('idle');
         },
+        cancel: () => {
+          cleanup();
+          options.onStateChange('idle');
+        },
         isListening: () => active,
       };
     } catch (e) {
@@ -260,22 +310,23 @@ export async function startSmartSpeechRecognition(options: SmartSTTOptions): Pro
           analyser.fftSize = 512;
           source.connect(analyser);
 
-          const buffer = new Uint8Array(analyser.frequencyBinCount);
-          const SILENCE_THRESHOLD = 14; // Ambang batas volume suara
-          const SILENCE_DURATION_MS = 1400; // Otomatis stop setelah jeda 1.4 detik
+          const buffer = new Uint8Array(analyser.fftSize);
+          // Gunakan RMS time-domain dengan jeda 550ms agar respons terasa instan (~1 detik setelah selesai bicara)
+          const SILENCE_THRESHOLD = 4.5;
+          const SILENCE_DURATION_MS = 550;
 
           const checkVolume = () => {
             if (!active || recorder.state === 'inactive') return;
-            analyser.getByteFrequencyData(buffer);
+            analyser.getByteTimeDomainData(buffer);
 
-            // Hitung rata-rata volume
-            let sum = 0;
+            let sumSquares = 0;
             for (let i = 0; i < buffer.length; i++) {
-              sum += buffer[i];
+              const centered = buffer[i] - 128;
+              sumSquares += centered * centered;
             }
-            const average = sum / buffer.length;
+            const rms = Math.sqrt(sumSquares / buffer.length);
 
-            if (average > SILENCE_THRESHOLD) {
+            if (rms > SILENCE_THRESHOLD) {
               hasUserSpoken = true;
               if (silenceTimeout) {
                 clearTimeout(silenceTimeout);
@@ -308,9 +359,11 @@ export async function startSmartSpeechRecognition(options: SmartSTTOptions): Pro
         }
       };
 
+      let aborted = false;
+
       recorder.onstop = async () => {
         cleanup();
-        if (audioChunks.length === 0) {
+        if (aborted || audioChunks.length === 0) {
           options.onStateChange('idle');
           return;
         }
@@ -324,12 +377,14 @@ export async function startSmartSpeechRecognition(options: SmartSTTOptions): Pro
 
           const transcript = await transcribeAudio(recordedBlob);
           options.onStateChange('idle');
+          if (aborted) return;
           if (transcript) {
             options.onFinalResult(transcript);
           } else {
             options.onStateChange('idle', 'Suara tidak terdeteksi, silakan coba lagi.');
           }
         } catch (err: any) {
+          if (aborted) return;
           console.error('STT process error:', err);
           options.onStateChange('idle');
           if (options.onError) {
@@ -348,6 +403,14 @@ export async function startSmartSpeechRecognition(options: SmartSTTOptions): Pro
           }
           cleanup();
         },
+        cancel: () => {
+          aborted = true;
+          if (recorder.state === 'recording') {
+            recorder.stop();
+          }
+          cleanup();
+          options.onStateChange('idle');
+        },
         isListening: () => active,
       };
     } catch (err: any) {
@@ -362,6 +425,7 @@ export async function startSmartSpeechRecognition(options: SmartSTTOptions): Pro
       }
       return {
         stop: () => {},
+        cancel: () => {},
         isListening: () => false,
       };
     }
@@ -369,4 +433,105 @@ export async function startSmartSpeechRecognition(options: SmartSTTOptions): Pro
 
   // Jika SpeechRecognition tidak ada di browser, langsung gunakan MediaRecorder + Deepgram VAD
   return fallbackToDeepgramWithVAD();
+}
+
+/**
+ * Detektor interupsi (Barge-In) saat AI sedang berbicara.
+ * Menggunakan echoCancellation browser + ambang RMS lebih tinggi & durasi minimal ~100ms
+ * agar gema speaker AI tidak memicu interupsi palsu.
+ */
+export async function startBargeInDetector(
+  onBargeIn: () => void,
+): Promise<{ stop: () => void }> {
+  let active = true;
+  let stream: MediaStream | null = null;
+  let audioCtx: AudioContext | null = null;
+  let rafId: number | null = null;
+
+  const stop = () => {
+    if (!active) return;
+    active = false;
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    if (audioCtx && audioCtx.state !== 'closed') {
+      try {
+        audioCtx.close();
+      } catch (_) {}
+      audioCtx = null;
+    }
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+      stream = null;
+    }
+  };
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+    });
+
+    if (!active) {
+      stop();
+      return { stop };
+    }
+
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) {
+      stop();
+      return { stop };
+    }
+
+    audioCtx = new AudioCtx();
+    const source = audioCtx.createMediaStreamSource(stream);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    source.connect(analyser);
+
+    const buffer = new Uint8Array(analyser.fftSize);
+    const BARGE_IN_RMS_THRESHOLD = 13;
+    const REQUIRED_CONSECUTIVE_FRAMES = 6;
+    let consecutiveHits = 0;
+
+    const check = () => {
+      if (!active) return;
+      analyser.getByteTimeDomainData(buffer);
+
+      let sumSquares = 0;
+      for (let i = 0; i < buffer.length; i++) {
+        const centered = buffer[i] - 128;
+        sumSquares += centered * centered;
+      }
+      const rms = Math.sqrt(sumSquares / buffer.length);
+
+      if (rms > BARGE_IN_RMS_THRESHOLD) {
+        consecutiveHits++;
+        if (consecutiveHits >= REQUIRED_CONSECUTIVE_FRAMES) {
+          stop();
+          onBargeIn();
+          return;
+        }
+      } else {
+        consecutiveHits = 0;
+      }
+
+      rafId = requestAnimationFrame(check);
+    };
+
+    // Beri jeda 250ms sebelum aktif agar bunyi klik/awal audio tidak memicu barge-in
+    setTimeout(() => {
+      if (active) {
+        rafId = requestAnimationFrame(check);
+      }
+    }, 250);
+  } catch {
+    stop();
+  }
+
+  return { stop };
 }

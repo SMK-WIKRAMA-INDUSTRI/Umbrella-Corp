@@ -13,6 +13,7 @@ export interface GeminiCallOptions {
   apiKey?: string;
   model?: string;
   systemContext?: string;
+  voiceMode?: boolean;
 }
 
 /**
@@ -27,6 +28,7 @@ export async function callOpenRouterLive({
   apiKey = '',
   model = DEFAULT_OPENROUTER_MODEL,
   systemContext = DEFAULT_HOSPITAL_CONTEXT,
+  voiceMode = false,
 }: GeminiCallOptions): Promise<string> {
   const trimmedQuery = userQuery.trim();
   if (!trimmedQuery) {
@@ -46,6 +48,7 @@ export async function callOpenRouterLive({
       },
       body: JSON.stringify({
         userQuery: trimmedQuery,
+        voiceMode,
         chatHistory: chatHistory.slice(-6).map((msg) => ({
           role: msg.role === 'model' || msg.role === 'assistant' ? 'assistant' : 'user',
           text: msg.text,

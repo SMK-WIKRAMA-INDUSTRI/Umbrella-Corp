@@ -49,7 +49,10 @@ const OPENROUTER_API_KEY =
   process.env.OPENROUTER_API_KEY || process.env.VITE_OPENROUTER_API_KEY || "";
 const GEMINI_API_KEY =
   process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || "";
+const GEMINI_TTS_MODEL = process.env.GEMINI_TTS_MODEL || "gemini-3.8-flash-tts";
+const GEMINI_TTS_VOICE = process.env.GEMINI_TTS_VOICE || "Aoede";
 const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY || "";
+const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "flux-dewi-id";
 
 // 2. Sliding Window Rate Limiter (Protects against Denial of Service / Denial of Wallet)
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
@@ -235,13 +238,34 @@ function checkInstantKnowledgeCache(query) {
   return `${answers.join("\n\n")}${inventoryNote}`;
 }
 
+const VOICE_CS_STYLE_INSTRUCTION = `
+MODE TELEPON CUSTOMER SERVICE REALISTIS (DEWI - RS PT UMBRELLA CORP):
+- Namamu Dewi, staf Customer Service RS PT Umbrella Corp yang sedang menerima telepon.
+- Bicaralah seperti manusia sungguhan di telepon: hangat, tenang, sopan, dan natural. Hindari gaya bahasa kaku seperti robot atau artikel (jangan pernah ucapkan "Berdasarkan data", "Berikut adalah informasi", "Perlu dicatat", atau "Sebagai asisten AI").
+- Gunakan sapaan sopan "Bapak atau Ibu" (atau "Anda") dengan alur bicara yang luwes, misalnya "Baik, untuk layanan tersebut...", "Untuk jadwalnya saat ini...", atau "Jika Bapak atau Ibu berkenan...".
+- Jawab langsung ke inti pertanyaan dalam dua sampai tiga kalimat pendek agar cepat dan enak didengar.
+- Jangan mengulang salam pembuka atau kalimat "akan kami periksa dahulu" karena sistem sudah mengucapkannya sebelum jawabanmu.
+- Tulis angka, jam, dan harga dengan huruf, misalnya "dua juta delapan ratus lima puluh ribu rupiah", "pukul sembilan pagi", atau "nol dua satu delapan nol enam lima sembilan sembilan satu satu".
+- Ubah singkatan dan simbol agar terdengar natural saat diucapkan (misalnya tulis "dokter spesialis anak", "waktu Indonesia barat", "I G D", atau "B P J S", tanpa tanda kurung atau garis miring).
+- Jangan memakai daftar, bullet point, tanda bintang, pagar, atau simbol lain.
+- Tetap patuh pada BASIS PENGETAHUAN RESMI dan jangan mengarang data.`;
+
+const TEXT_CHAT_CONCISE_INSTRUCTION = `
+GAYA CHAT TEKS RINGKAS & LANGSUNG KE INTI:
+- Jawab dengan singkat, padat, dan jelas (maksimal 3-5 kalimat atau poin singkat yang paling penting saja).
+- Jangan bertele-tele, jangan menulis sub-judul berulang seperti "Catatan:", "Rekomendasi:", atau pengantar panjang.
+- Jika pengguna bertanya secara umum tentang daftar kamar rawat inap, daftar dokter/jadwal poli, asuransi/BPJS, atau layanan lab/radiologi, cukup berikan ringkasan singkat (1-3 kalimat) karena antarmuka sudah menampilkan kartu menu cepat yang bisa diklik di bawah jawaban Anda.`;
+
 // 5. Secure AI Dispatcher with AbortController Timeout (Always Route to Real AI)
 async function requestAICompletion(
   userQuery,
   chatHistory = [],
   clientApiKey = "",
+  voiceMode = false,
 ) {
-  const systemPrompt = HOSPITAL_ASSISTANT_PROMPT;
+  const systemPrompt = voiceMode
+    ? `${HOSPITAL_ASSISTANT_PROMPT}\n\n${VOICE_CS_STYLE_INSTRUCTION}`
+    : `${HOSPITAL_ASSISTANT_PROMPT}\n\n${TEXT_CHAT_CONCISE_INSTRUCTION}`;
 
   const messagesPayload = [
     { role: "system", content: systemPrompt },
@@ -274,8 +298,8 @@ async function requestAICompletion(
         body: JSON.stringify({
           model: process.env.OPENROUTER_MODEL || "deepseek/deepseek-chat",
           messages: messagesPayload,
-          max_tokens: 800,
-          temperature: 0.3,
+          max_tokens: voiceMode ? 140 : 800,
+          temperature: voiceMode ? 0.2 : 0.3,
         }),
       });
 
@@ -316,8 +340,8 @@ async function requestAICompletion(
         body: JSON.stringify({
           model: "deepseek-chat",
           messages: messagesPayload,
-          max_tokens: 800,
-          temperature: 0.3,
+          max_tokens: voiceMode ? 240 : 800,
+          temperature: voiceMode ? 0.2 : 0.3,
         }),
       });
 
@@ -332,51 +356,60 @@ async function requestAICompletion(
     }
   }
 
-  // 3. Coba Google Gemini API jika GEMINI_API_KEY atau kunci AIza tersedia
+  // 3. Coba Google Gemini API jika GEMINI_API_KEY tersedia
   const geminiKey =
-    (clientApiKey.startsWith("AIza") ? clientApiKey : "") ||
-    (GEMINI_API_KEY && !GEMINI_API_KEY.includes("your_") ? GEMINI_API_KEY : "");
+    (GEMINI_API_KEY && !GEMINI_API_KEY.includes("your_") ? GEMINI_API_KEY : "") ||
+    (clientApiKey && !clientApiKey.includes("your_") ? clientApiKey : "");
 
   if (geminiKey) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000);
+    const geminiModels = [
+      process.env.GEMINI_MODEL || "gemini-3.8-flash",
+      "gemini-3.5-flash",
+      "gemini-flash-latest",
+    ];
+    const contents = [
+      ...chatHistory.slice(-6).map((msg) => ({
+        role:
+          msg.role === "assistant" || msg.role === "model" ? "model" : "user",
+        parts: [{ text: String(msg.text || "").slice(0, 500) }],
+      })),
+      { role: "user", parts: [{ text: userQuery }] },
+    ];
 
-      const geminiModel = process.env.GEMINI_MODEL || "gemini-1.5-flash";
-      const contents = [
-        ...chatHistory.slice(-6).map((msg) => ({
-          role:
-            msg.role === "assistant" || msg.role === "model" ? "model" : "user",
-          parts: [{ text: String(msg.text || "").slice(0, 500) }],
-        })),
-        { role: "user", parts: [{ text: userQuery }] },
-      ];
+    for (const geminiModel of [...new Set(geminiModels)]) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`,
-        {
-          method: "POST",
-          signal: controller.signal,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents,
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            generationConfig: { temperature: 0.3, maxOutputTokens: 1000 },
-          }),
-        },
-      );
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${encodeURIComponent(geminiKey)}`,
+          {
+            method: "POST",
+            signal: controller.signal,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents,
+              systemInstruction: { parts: [{ text: systemPrompt }] },
+              generationConfig: {
+                temperature: voiceMode ? 0.2 : 0.4,
+                maxOutputTokens: voiceMode ? 160 : 1000,
+              },
+            }),
+          },
+        );
 
-      clearTimeout(timeoutId);
-      if (res.ok) {
-        const data = await res.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) return { text: text.trim(), source: "gemini" };
-      } else {
-        const errText = await res.text();
-        console.warn(`Gemini API error (${res.status}):`, errText);
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          const data = await res.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) return { text: text.trim(), source: "gemini" };
+        } else {
+          const errText = await res.text();
+          console.warn(`Gemini API (${geminiModel}) error (${res.status}):`, errText);
+        }
+      } catch (err) {
+        console.warn(`Gemini (${geminiModel}) upstream error:`, err.message);
       }
-    } catch (err) {
-      console.warn("Gemini upstream error:", err.message);
     }
   }
 
@@ -512,6 +545,7 @@ const server = http.createServer(async (req, res) => {
           userQuery,
           chatHistory,
           payload.apiKey,
+          Boolean(payload.voiceMode),
         );
 
         res.writeHead(200, { "Content-Type": "application/json" });
@@ -532,6 +566,169 @@ const server = http.createServer(async (req, res) => {
           }),
         );
       }
+    });
+    return;
+  }
+
+  // API Route: Text-to-Speech Synthesis (Deepgram Aura TTS -> Gemini 3.8 Fallback)
+  if (req.url.startsWith("/api/tts") && req.method === "POST") {
+    const geminiKey =
+      GEMINI_API_KEY && !GEMINI_API_KEY.includes("your_") ? GEMINI_API_KEY : "";
+
+    if (!geminiKey && !DEEPGRAM_API_KEY) {
+      res.writeHead(503, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          error: "TTS_NOT_CONFIGURED",
+          message: "Layanan suara belum dikonfigurasi.",
+        }),
+      );
+      return;
+    }
+
+    if (isRateLimited(clientIp)) {
+      res.writeHead(429, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          error: "RATE_LIMIT_EXCEEDED",
+          message: "Batas frekuensi permintaan suara tercapai. Mohon tunggu sejenak.",
+        }),
+      );
+      return;
+    }
+
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+      if (body.length > 20 * 1024) {
+        res.writeHead(413, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Payload too large" }));
+        req.destroy();
+      }
+    });
+
+    req.on("end", async () => {
+      let payload = {};
+      try {
+        payload = JSON.parse(body || "{}");
+      } catch (_) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Invalid JSON payload" }));
+        return;
+      }
+
+      const text = String(payload.text || "").trim().slice(0, 1900);
+      if (!text) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "text is required" }));
+        return;
+      }
+
+      // 1. Utamakan Deepgram Flux TTS v2 (flux-fitri-id, streaming MP3 Bahasa Indonesia)
+      if (DEEPGRAM_API_KEY) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+          const isFlux = DEEPGRAM_TTS_MODEL.startsWith("flux-");
+          const dgUrl = isFlux
+            ? `https://api.deepgram.com/v2/speak?model=${encodeURIComponent(DEEPGRAM_TTS_MODEL)}&encoding=mp3`
+            : `https://api.deepgram.com/v1/speak?model=${encodeURIComponent(DEEPGRAM_TTS_MODEL)}`;
+
+          const dgRes = await fetch(dgUrl, {
+            method: "POST",
+            signal: controller.signal,
+            headers: {
+              Authorization: `Token ${DEEPGRAM_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ text }),
+          });
+          clearTimeout(timeoutId);
+
+          if (dgRes.ok && dgRes.body) {
+            res.writeHead(200, {
+              "Content-Type": dgRes.headers.get("content-type") || "audio/mpeg",
+              "Cache-Control": "no-store",
+            });
+            for await (const chunk of dgRes.body) {
+              res.write(chunk);
+            }
+            res.end();
+            return;
+          } else {
+            const errText = await dgRes.text();
+            console.warn(`Deepgram TTS status (${dgRes.status}):`, errText);
+          }
+        } catch (err) {
+          console.warn("Deepgram TTS gateway error:", err.message);
+        }
+      }
+
+      // 2. Fallback ke Gemini 3.8 TTS jika Deepgram gagal
+      if (geminiKey) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 18000);
+
+          const gRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_TTS_MODEL)}:generateContent?key=${encodeURIComponent(geminiKey)}`,
+            {
+              method: "POST",
+              signal: controller.signal,
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    parts: [
+                      {
+                        text: `Ucapkan kalimat berikut dengan nada ramah, hangat, dan natural seperti Customer Service rumah sakit di Indonesia:\n\n${text}`,
+                      },
+                    ],
+                  },
+                ],
+                generationConfig: {
+                  responseModalities: ["AUDIO"],
+                  speechConfig: {
+                    voiceConfig: {
+                      prebuiltVoiceConfig: { voiceName: GEMINI_TTS_VOICE },
+                    },
+                  },
+                },
+              }),
+            },
+          );
+          clearTimeout(timeoutId);
+
+          if (gRes.ok) {
+            const gData = await gRes.json();
+            const inline = gData.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+            if (inline?.data) {
+              const audioBuffer = Buffer.from(inline.data, "base64");
+              res.writeHead(200, {
+                "Content-Type": inline.mimeType || "audio/wav",
+                "Content-Length": audioBuffer.length,
+                "Cache-Control": "no-store",
+              });
+              res.end(audioBuffer);
+              return;
+            }
+          } else {
+            const errText = await gRes.text();
+            console.warn(`Gemini TTS fallback status (${gRes.status}):`, errText);
+          }
+        } catch (err) {
+          console.warn("Gemini TTS fallback error:", err.message);
+        }
+      }
+
+      res.writeHead(502, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          error: "TTS_FAILED",
+          message: "Gagal menghasilkan suara AI.",
+        }),
+      );
     });
     return;
   }
