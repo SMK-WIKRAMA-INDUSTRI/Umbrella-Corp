@@ -9,12 +9,14 @@ interface PlaygroundHeaderProps {
   onOpenTutorial: () => void;
   onBackToHome: () => void;
   messageCount: number;
+  onOpenAuth?: (mode: 'login' | 'register') => void;
 }
 
 export const PlaygroundHeader: React.FC<PlaygroundHeaderProps> = ({
   onOpenTutorial,
   onBackToHome,
   messageCount,
+  onOpenAuth,
 }) => {
   // State modal untuk fitur yang berstatus "Coming Soon"
   const [comingSoonFeature, setComingSoonFeature] = useState<{ title: string; desc: string } | null>(null);
@@ -203,24 +205,14 @@ export const PlaygroundHeader: React.FC<PlaygroundHeaderProps> = ({
           {/* Sisi Kanan: Desktop (Masuk & Daftar) */}
           <div className="hidden lg:flex items-center space-x-3">
             <button
-              onClick={() =>
-                setComingSoonFeature({
-                  title: 'Portal Masuk Pasien',
-                  desc: 'Layanan login autentikasi pasien sedang disiapkan untuk keamanan data medis terenkripsi.',
-                })
-              }
+              onClick={() => onOpenAuth?.('login')}
               className="px-5 py-2.5 text-sm sm:text-base font-semibold text-slate-700 hover:text-[#E11D48] transition-colors active:scale-95"
             >
               Masuk
             </button>
 
             <button
-              onClick={() =>
-                setComingSoonFeature({
-                  title: 'Pendaftaran Akun Pasien Baru',
-                  desc: 'Fitur pendaftaran akun digital pasien baru akan segera dibuka pada rilis portal tahap berikutnya.',
-                })
-              }
+              onClick={() => onOpenAuth?.('register')}
               className="px-6 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm sm:text-base shadow-sm hover:shadow-md transition-all active:scale-95"
             >
               Daftar

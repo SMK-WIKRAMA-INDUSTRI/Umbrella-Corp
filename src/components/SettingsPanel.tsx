@@ -12,7 +12,7 @@ interface SettingsPanelProps {
   systemContext: string;
   onContextChange: (ctx: string) => void;
   uploadedFileName: string | null;
-  onFileUpload: (file: File) => void;
+  onFileUpload: (file: File, extractedText?: string) => void;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
@@ -28,15 +28,78 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onFileUpload,
 }) => {
   const [showKey, setShowKey] = useState(false);
+  const [documents, setDocuments] = useState<Array<{ name: string; pages: number; text: string }>>([]);
+  const [pdfStatus, setPdfStatus] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      onFileUpload(e.target.files[0]);
+  const loadPdfJs = async () => {
+    const w = window as any;
+    if (!w.__pdfjsPromise) {
+      w.__pdfjsPromise = (async () => {
+        const pdfjsLib: any = await (new Function('return import("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs")') as () => Promise<any>)();
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs';
+        return pdfjsLib;
+      })();
     }
+    return w.__pdfjsPromise;
+  };
+
+  const extractPdfText = async (file: File): Promise<{ pages: number; text: string }> => {
+    const pdfjsLib = await loadPdfJs();
+    const data = new Uint8Array(await file.arrayBuffer());
+    const pdf = await pdfjsLib.getDocument({ data }).promise;
+    const pageCount = pdf.numPages;
+    const pageTexts: string[] = [];
+    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber++) {
+      const page = await pdf.getPage(pageNumber);
+      const content = await page.getTextContent();
+      const text = content.items.map((item: any) => item.str + (item.hasEOL ? '\n' : ' ')).join('');
+      pageTexts.push(text.trim());
+    }
+    await pdf.destroy();
+    const text = pageTexts.join('\n\n').replace(/[ \t]+/g, ' ').trim();
+    return { pages: pageCount, text };
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setIsProcessing(true);
+    let success = 0;
+    const newDocs: Array<{ name: string; pages: number; text: string }> = [];
+    for (const file of files) {
+      try {
+        let pages = 0;
+        let text = '';
+        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+        if (isPdf) {
+          const res = await extractPdfText(file);
+          pages = res.pages;
+          text = res.text;
+          if (!text) continue; // scanned image PDF
+        } else {
+          text = await file.text();
+          pages = 1;
+        }
+        newDocs.push({ name: file.name, pages, text });
+        success++;
+        onFileUpload(file, text);
+      } catch (err) {
+        console.warn('Gagal membaca berkas:', file.name, err);
+      }
+    }
+    setDocuments((prev) => [...prev, ...newDocs]);
+    setPdfStatus(success > 0 ? `${success} dokumen berhasil dibaca` : 'Tidak ada dokumen yang dapat dibaca');
+    setIsProcessing(false);
+    e.target.value = '';
+  };
+
+  const removeDocument = (idx: number) => {
+    setDocuments((prev) => prev.filter((_, i) => i !== idx));
   };
 
   return (
-    <aside className="w-full lg:w-[360px] xl:w-[390px] h-full flex flex-col bg-white border border-[#E2E8F0] rounded-2xl shadow-subtle overflow-hidden select-none text-left flex-shrink-0 font-sans">
+    <aside className="w-full h-full flex flex-col bg-white border border-[#E2E8F0] rounded-2xl shadow-subtle overflow-hidden select-none text-left font-sans">
       
       {/* Panel Header */}
       <div className="px-5 py-3.5 border-b border-[#F1F5F9] flex items-center justify-between bg-white flex-shrink-0">
@@ -50,7 +113,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       </div>
 
       {/* Scrollable Form Body */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-5">
+      <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5">
         
         {/* 1. Transparansi Identitas Asisten AI */}
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
@@ -178,6 +241,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             placeholder="Tuliskan konteks data operasional rumah sakit di sini..."
             className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-sans leading-relaxed focus:outline-none focus:border-[#E11D48] resize-y min-h-[140px]"
           />
+
         </div>
 
         {/* 5. DOKUMEN BASIS PENGETAHUAN (Opsional) */}
@@ -196,6 +260,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               <input
                 type="file"
                 accept=".txt,.pdf,.md,.json"
+                multiple
                 onChange={handleFileChange}
                 className="hidden"
               />
@@ -204,6 +269,28 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               {uploadedFileName || 'Belum ada berkas dipilih'}
             </span>
           </div>
+          {isProcessing && (
+            <p className="text-[11px] text-slate-500">Memproses dokumen...</p>
+          )}
+          {pdfStatus && !isProcessing && (
+            <p className="text-[11px] text-emerald-600 font-medium" role="status" aria-live="polite">{pdfStatus}</p>
+          )}
+          {documents.length > 0 && (
+            <ul className="space-y-1 pt-1">
+              {documents.map((doc, idx) => (
+                <li key={idx} className="flex items-center justify-between gap-2 text-[11px] text-slate-600 bg-slate-50 rounded px-2 py-1 min-w-0">
+                  <span className="truncate flex-1 min-w-0">{doc.name} ({doc.pages} halaman)</span>
+                  <button
+                    type="button"
+                    onClick={() => removeDocument(idx)}
+                    className="text-rose-600 hover:text-rose-800 font-semibold ml-2 flex-shrink-0"
+                  >
+                    Hapus
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* 6. Indikator Status Konteks */}

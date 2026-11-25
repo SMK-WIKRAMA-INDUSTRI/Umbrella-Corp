@@ -16,5 +16,364 @@
   <body class="bg-[#F8FAFC] text-[#0F172A] font-sans antialiased selection:bg-rose-100 selection:text-rose-900">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Panel Pengaturan (simplified) -->
+    <section id="settings-panel" style="display:none">
+      <label for="context-text" class="field-label">Konteks teks</label>
+      <textarea id="context-text"></textarea>
+
+      <label for="pdf-input" class="field-label">Dokumen PDF</label>
+      <input id="pdf-input" type="file" accept="application/pdf,.pdf" multiple>
+      <p id="pdf-status" role="status" aria-live="polite"></p>
+      <ul id="pdf-list"></ul>
+
+      <label for="deepgram-key" class="field-label">API key Deepgram</label>
+      <input id="deepgram-key" type="password" autocomplete="off" spellcheck="false"
+        placeholder="Tempel API key Deepgram di sini" class="field">
+
+      <button id="btn-mic" type="button" aria-label="Rekam suara" class="btn w-11 px-0">
+        <svg id="mic-icon" aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6"
+          fill="none" stroke="currentColor" stroke-width="2.5">
+          <rect x="9" y="2.5" width="6" height="12" rx="3" />
+          <path d="M5 11.5a7 7 0 0 0 14 0M12 18.5V22M8 22h8" />
+        </svg>
+        <svg id="stop-icon" aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6 hidden"
+          fill="currentColor">
+          <rect x="6" y="6" width="12" height="12" rx="2" />
+        </svg>
+      </button>
+    </section>
+
+    <script>
+      const PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs';
+      const PDFJS_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs';
+
+      const el = {
+        contextText: document.getElementById('context-text'),
+        pdfInput: document.getElementById('pdf-input'),
+        pdfStatus: document.getElementById('pdf-status'),
+        pdfList: document.getElementById('pdf-list'),
+        deepgramKey: document.getElementById('deepgram-key'),
+        micButton: document.getElementById('btn-mic'),
+        micIcon: document.getElementById('mic-icon'),
+        stopIcon: document.getElementById('stop-icon'),
+        chatInput: document.getElementById('chat-input'),
+        chatStatus: document.getElementById('chat-status'),
+        chatForm: document.getElementById('chat-form'),
+      };
+
+      const state = {
+        documents: [], // { name, pages, text }
+        history: [], // { role: 'user' | 'assistant', content }
+        isSending: false,
+        error: '',
+        voiceStatus: 'idle', // 'idle' | 'connecting' | 'recording' | 'transcribing'
+        callStatus: 'off', // 'off' | 'connecting' | 'listening' | 'thinking' | 'speaking'
+      };
+
+      let pdfjsPromise = null;
+
+      // pdf.js baru diunduh saat pertama kali ada PDF, jadi halaman awal tetap ringan.
+      function loadPdfJs() {
+        if (!pdfjsPromise) {
+          pdfjsPromise = import(PDFJS_URL)
+            .then((pdfjsLib) => {
+              pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+              return pdfjsLib;
+            })
+            .catch((error) => {
+              pdfjsPromise = null; // supaya bisa dicoba lagi setelah internet kembali
+              throw error;
+            });
+        }
+        return pdfjsPromise;
+      }
+
+      async function extractPdfText(file) {
+        const pdfjsLib = await loadPdfJs();
+        const data = new Uint8Array(await file.arrayBuffer());
+        const pdf = await pdfjsLib.getDocument({ data }).promise;
+        const pageCount = pdf.numPages;
+        const pageTexts = [];
+
+        for (let pageNumber = 1; pageNumber <= pageCount; pageNumber++) {
+          const page = await pdf.getPage(pageNumber);
+          const content = await page.getTextContent();
+          // hasEOL menandai akhir baris di PDF, jadi baris asli tetap terjaga.
+          const text = content.items.map((item) => item.str + (item.hasEOL ? '\n' : ' ')).join('');
+          pageTexts.push(text.trim());
+        }
+
+        await pdf.destroy();
+        const text = pageTexts.join('\n\n').replace(/[ \t]+/g, ' ').trim();
+        return { pages: pageCount, text };
+      }
+
+      async function handlePdfFiles(files) {
+        const list = Array.from(files || []);
+        let success = 0;
+        for (const file of list) {
+          try {
+            const { pages, text } = await extractPdfText(file);
+            if (!text) {
+              // PDF hasil scan (gambar) -> tolak
+              continue;
+            }
+            state.documents.push({ name: file.name, pages, text });
+            success++;
+          } catch (e) {
+            // gagal baca
+          }
+        }
+        if (el.pdfStatus) {
+          el.pdfStatus.textContent = `${success} PDF berhasil dibaca`;
+        }
+        renderPdfList();
+      }
+
+      function renderPdfList() {
+        if (!el.pdfList) return;
+        el.pdfList.innerHTML = '';
+        state.documents.forEach((doc, idx) => {
+          const li = document.createElement('li');
+          const btn = document.createElement('button');
+          btn.textContent = 'Hapus';
+          btn.addEventListener('click', () => {
+            state.documents.splice(idx, 1);
+            renderPdfList();
+          });
+          li.textContent = `${doc.name} (${doc.pages} halaman) `;
+          li.appendChild(btn);
+          el.pdfList.appendChild(li);
+        });
+      }
+
+      function buildContext() {
+        const parts = [];
+        const text = el.contextText ? el.contextText.value.trim() : '';
+        if (text) parts.push(`[Catatan teks]\n${text}`);
+        for (const doc of state.documents) {
+          parts.push(`[Dokumen: ${doc.name}]\n${doc.text}`);
+        }
+        return parts.join('\n\n');
+      }
+
+      function buildSystemPrompt() {
+        return buildContext();
+      }
+
+      if (el.pdfInput) {
+        el.pdfInput.addEventListener('change', (e) => {
+          handlePdfFiles(e.target.files);
+        });
+      }
+    </script>
+    <script>
+      const DEEPGRAM_LIVE_URL = 'wss://api.deepgram.com/v1/listen?model=nova-3&language=id&smart_format=true&interim_results=true&endpointing=500&utterance_end_ms=1000';
+      const DEEPGRAM_SPEAK_URL = 'https://api.deepgram.com/v2/speak?model=flux-fitri-id&encoding=mp3';
+      const MAX_RECORDING_SECONDS = 60;
+      const dictation = {};
+      const call = {};
+
+      function setupKeyField(input, toggle, remember, storageKey) {
+        if (toggle) toggle.addEventListener('click', () => {
+          if (input) input.type = input.type === 'password' ? 'text' : 'password';
+        });
+      }
+
+      setupKeyField(el.deepgramKey, null, null, 'deepgramKey');
+
+      function getMicrophone() {
+        return navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+
+      function openDeepgramSocket(apiKey) {
+        return new Promise((resolve, reject) => {
+          const socket = new WebSocket(DEEPGRAM_LIVE_URL, ['token', apiKey]);
+          socket.addEventListener('open', () => resolve(socket));
+          socket.addEventListener('error', () => {
+            reject(new Error('Gagal tersambung ke Deepgram. Periksa API key Deepgram dan koneksi internet.'));
+          });
+        });
+      }
+
+      function setVoiceStatus(status) {
+        state.voiceStatus = status;
+        renderChatControls();
+      }
+
+      function renderChatControls() {
+        if (el.micButton) {
+          el.micButton.classList.toggle('bg-black', state.voiceStatus === 'recording');
+        }
+        if (el.micIcon) el.micIcon.classList.toggle('hidden', state.voiceStatus === 'recording');
+        if (el.stopIcon) el.stopIcon.classList.toggle('hidden', state.voiceStatus !== 'recording');
+      }
+
+      function collectTranscript(target, data) {
+        const text = data.channel.alternatives[0].transcript;
+        if (data.is_final) {
+          if (text) target.finalText = `${target.finalText} ${text}`.trim();
+          target.interimText = '';
+        } else {
+          target.interimText = text;
+        }
+        return `${target.finalText} ${target.interimText}`.trim();
+      }
+
+      async function startRecording() {
+        const stream = await getMicrophone();
+        let socket;
+        try {
+          socket = await openDeepgramSocket(el.deepgramKey.value.trim());
+        } catch (error) {
+          stream.getTracks().forEach((track) => track.stop());
+          throw error;
+        }
+        const recorder = new MediaRecorder(stream);
+        Object.assign(dictation, {
+          socket, stream, recorder, typedText: (el.chatInput ? el.chatInput.value.trim() : ''), finalText: '', interimText: '', stopping: false,
+        });
+        socket.addEventListener('message', handleDictationMessage);
+        socket.addEventListener('close', finishRecording);
+        recorder.addEventListener('dataavailable', (event) => {
+          if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) socket.send(event.data);
+        });
+        recorder.addEventListener('stop', () => {
+          stream.getTracks().forEach((track) => track.stop());
+          if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'CloseStream' }));
+          setTimeout(() => socket.close(), 5000);
+        });
+        recorder.start(250);
+        dictation.timer = setTimeout(stopRecording, MAX_RECORDING_SECONDS * 1000);
+        setVoiceStatus('recording');
+      }
+
+      function handleDictationMessage(event) {
+        const data = JSON.parse(event.data);
+        if (data.type !== 'Results') return;
+        if (el.chatInput) {
+          el.chatInput.value = `${dictation.typedText} ${collectTranscript(dictation, data)}`.trim();
+        }
+      }
+
+      function stopRecording() {
+        if (state.voiceStatus !== 'recording') return;
+        clearTimeout(dictation.timer);
+        dictation.stopping = true;
+        dictation.recorder.stop();
+        setVoiceStatus('transcribing');
+        if (el.chatStatus) el.chatStatus.textContent = 'Menunggu teks terakhir dari Deepgram.';
+      }
+
+      function finishRecording() {
+        clearTimeout(dictation.timer);
+        if (dictation.recorder && dictation.recorder.state !== 'inactive') dictation.recorder.stop();
+        if (dictation.stream) dictation.stream.getTracks().forEach((track) => track.stop());
+        const { typedText, finalText, interimText, stopping } = dictation;
+        const heard = stopping ? finalText : `${finalText} ${interimText}`.trim();
+        if (el.chatInput) el.chatInput.value = `${typedText} ${heard}`.trim();
+        setVoiceStatus('idle');
+        if (el.micButton) el.micButton.focus();
+        if (!stopping) {
+          // sambungan putus
+        } else if (!finalText) {
+          // suara tidak terdengar
+        } else {
+          if (el.chatForm) el.chatForm.requestSubmit();
+          autoRespondWithVoice(heard);
+        }
+      }
+
+      function setCallStatus(status) {
+        state.callStatus = status;
+      }
+
+      const AGENT_NAME = 'Fitri';
+      const CALL_RULES = [
+        `Namamu ${AGENT_NAME}.`,
+        'Pelanggan sedang menelepon, jadi jawabanmu akan dibacakan dengan suara.',
+      ].join('\\n');
+
+      function pauseListening() {
+        if (call.recorder?.state === 'recording') call.recorder.pause();
+      }
+      function resumeListening() {
+        call.finalText = '';
+        call.interimText = '';
+        call.turnEnded = false;
+        if (call.recorder?.state === 'paused') call.recorder.resume();
+        setCallStatus('listening');
+      }
+
+      function streamAudio(response) {
+        const mediaSource = new MediaSource();
+        const audio = new Audio(URL.createObjectURL(mediaSource));
+        mediaSource.addEventListener('sourceopen', async () => {
+          const buffer = mediaSource.addSourceBuffer('audio/mpeg');
+          const reader = response.body.getReader();
+          try {
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              buffer.appendBuffer(value);
+              await new Promise((resolve) => buffer.addEventListener('updateend', resolve, { once: true }));
+            }
+            mediaSource.endOfStream();
+          } catch {
+            if (mediaSource.readyState === 'open') mediaSource.endOfStream('network');
+          }
+        }, { once: true });
+        return audio;
+      }
+
+      function buildGreeting() {
+        const hour = new Date().getHours();
+        const time = hour < 11 ? 'pagi' : hour < 15 ? 'siang' : hour < 18 ? 'sore' : 'malam';
+        return `Halo, selamat ${time}! Dengan ${AGENT_NAME} dari customer service. Ada yang bisa saya bantu, Kak?`;
+      }
+
+      function settlesWithin(promise, ms) {
+        const settled = promise.then(() => true, () => true);
+        const timeout = new Promise((resolve) => setTimeout(() => resolve(false), ms));
+        return Promise.race([settled, timeout]);
+      }
+
+      // Ketika user berhenti bicara, kirim pertanyaan lalu bacakan jawaban Netra dengan suara.
+      async function autoRespondWithVoice(question) {
+        try {
+          const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userQuery: question }),
+          });
+          if (!res.ok) return;
+          const data = await res.json();
+          const reply = data.reply || '';
+          if (!reply) return;
+          const ttsRes = await fetch(DEEPGRAM_SPEAK_URL, {
+            method: 'POST',
+            headers: {
+              Authorization: `Token ${el.deepgramKey.value.trim()}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ text: reply }),
+          });
+          if (!ttsRes.ok) return;
+          const blob = await ttsRes.blob();
+          const audio = new Audio(URL.createObjectURL(blob));
+          await audio.play();
+        } catch (e) {
+          // abaikan error
+        }
+      }
+
+      if (el.micButton) {
+        el.micButton.addEventListener('click', () => {
+          if (state.voiceStatus === 'idle') startRecording().catch(() => {});
+          else if (state.voiceStatus === 'recording') stopRecording();
+        });
+      }
+    </script>
   </body>
 </html>

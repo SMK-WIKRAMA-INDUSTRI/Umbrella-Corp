@@ -3,6 +3,8 @@ import { LandingPage } from './components/LandingPage';
 import { PlaygroundHeader } from './components/PlaygroundHeader';
 import { ChatPlayground, ChatItem } from './components/ChatPlayground';
 import { TutorialModal } from './components/TutorialModal';
+import { SettingsPanel } from './components/SettingsPanel';
+import { AuthModal } from './components/AuthModal';
 import {
   DEFAULT_GEMINI_MODEL,
   DEFAULT_HOSPITAL_CONTEXT,
@@ -17,6 +19,15 @@ export const App: React.FC = () => {
   // 2. Daftar Pesan Percakapan (Bersih dari awal, siap menerima tanya-jawab pasien)
   const [messages, setMessages] = useState<ChatItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [apiKey, setApiKey] = useState<string>('');
+  const [systemContext, setSystemContext] = useState<string>(DEFAULT_HOSPITAL_CONTEXT);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [uploadedDocumentText, setUploadedDocumentText] = useState<string>('');
+  const [rememberKey, setRememberKey] = useState<boolean>(false);
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-flash-latest');
 
   // 3. Status Modal Panduan Penggunaan
   const [isTutorialOpen, setIsTutorialOpen] = useState<boolean>(false);
@@ -53,11 +64,13 @@ export const App: React.FC = () => {
         text: m.text,
       }));
 
+      const combinedContext = systemContext + (uploadedDocumentText ? `\n\n[Dokumen Terlampir]\n${uploadedDocumentText}` : '');
       const aiText = await callGeminiLive({
         userQuery: queryText,
         chatHistory: historyForAPI,
-        model: DEFAULT_GEMINI_MODEL,
-        systemContext: DEFAULT_HOSPITAL_CONTEXT,
+        apiKey: apiKey,
+        model: selectedModel,
+        systemContext: combinedContext,
       });
 
       const aiMessage: ChatItem = {
@@ -109,22 +122,63 @@ export const App: React.FC = () => {
         onOpenTutorial={() => setIsTutorialOpen(true)}
         onBackToHome={() => setCurrentView('landing')}
         messageCount={messages.length}
+          onOpenAuth={(mode) => { setAuthMode(mode); setIsAuthOpen(true); }}
       />
 
       {/* Area Chatbot Penuh (Tanpa sidebar pengaturan, user langsung pakai) */}
-      <main className="flex-1 min-h-0 w-full flex flex-col overflow-hidden">
+      <main className="flex-1 min-h-0 w-full flex flex-col overflow-hidden relative">
         <ChatPlayground
           messages={messages}
           isLoading={isLoading}
           onSendMessage={handleSendMessage}
           onClearChat={handleClearChat}
         />
+
+        {/* Tombol Pengaturan (untuk akses upload PDF & API key) */}
+        <button
+          type="button"
+          onClick={() => setIsSettingsOpen(true)}
+          className="absolute top-3 right-3 z-30 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+        >
+          Pengaturan
+        </button>
+
+        {isSettingsOpen && (
+          <div className="absolute inset-0 z-40 flex">
+            <div className="flex-1 min-w-0 bg-black/30" onClick={() => setIsSettingsOpen(false)} />
+            <div className="w-full max-w-md h-full">
+              <SettingsPanel
+                apiKey={apiKey}
+                onApiKeyChange={setApiKey}
+                rememberKey={rememberKey}
+                onToggleRememberKey={setRememberKey}
+                selectedModel={selectedModel}
+                onModelChange={setSelectedModel}
+                systemContext={systemContext}
+                onContextChange={setSystemContext}
+                uploadedFileName={uploadedFileName}
+                onFileUpload={(file, extractedText) => {
+                  setUploadedFileName(file.name);
+                  if (extractedText) {
+                    setUploadedDocumentText((prev) => (prev ? prev + '\n\n' + extractedText : extractedText));
+                  }
+                }}
+              />
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Modal Panduan Penggunaan */}
       <TutorialModal
         isOpen={isTutorialOpen}
         onClose={() => setIsTutorialOpen(false)}
+      />
+
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        initialMode={authMode}
       />
 
     </div>
