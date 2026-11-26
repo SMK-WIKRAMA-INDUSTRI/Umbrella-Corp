@@ -876,12 +876,22 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
 
   const loadPdfJs = async () => {
     const w = window as any;
+    if (w.__pdfjsLib) return w.__pdfjsLib;
     if (!w.__pdfjsPromise) {
-      w.__pdfjsPromise = (async () => {
-        const pdfjsLib: any = await (new Function('return import("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs")') as () => Promise<any>)();
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs';
-        return pdfjsLib;
-      })();
+      w.__pdfjsPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.textContent = `
+          import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs';
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs';
+          window.__pdfjsLib = pdfjsLib;
+          window.dispatchEvent(new Event('pdfjs-loaded'));
+        `;
+        script.onerror = () => reject(new Error('Gagal memuat pdf.js'));
+        document.head.appendChild(script);
+        const onLoaded = () => resolve(w.__pdfjsLib);
+        window.addEventListener('pdfjs-loaded', onLoaded, { once: true });
+      });
     }
     return w.__pdfjsPromise;
   };
@@ -895,11 +905,10 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
     for (let pageNumber = 1; pageNumber <= pageCount; pageNumber++) {
       const page = await pdf.getPage(pageNumber);
       const content = await page.getTextContent();
-      const text = content.items.map((item: any) => item.str + (item.hasEOL ? '\\n' : ' ')).join('');
-      pageTexts.push(text.trim());
+      const text = content.items.map((item: any) => item.str + (item.hasEOL ? '\n' : ' ')).join('');      pageTexts.push(text.trim());
     }
     await pdf.destroy();
-    const text = pageTexts.join('\\n\\n').replace(/[ \\t]+/g, ' ').trim();
+    const text = pageTexts.join('\n\n').replace(/[ \t]+/g, ' ').trim();
     return { pages: pageCount, text };
   };
 
@@ -1584,6 +1593,15 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
                 </button>
               )}
             </div>
+          )}
+
+          {uploadedFileName && (
+            <div className="mb-2 text-xs text-emerald-600 font-medium">
+              Dokumen terlampir: {uploadedFileName}
+            </div>
+          )}
+          {docStatus && !isProcessingDoc && (
+            <div className="mb-2 text-xs text-emerald-600 font-medium">{docStatus}</div>
           )}
 
           {/* Input Form Bar */}

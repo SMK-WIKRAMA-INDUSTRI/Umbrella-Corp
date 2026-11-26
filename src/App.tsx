@@ -84,7 +84,7 @@ export const App: React.FC = () => {
     const timestamp = getCurrentWIB();
 
     // Deteksi intent reservasi kamar -> buka form (data masuk ke Supabase room_bookings)
-    const lower = queryText.toLowerCase();
+    const lower = String(queryText ?? '').toLowerCase();
     const isBookingIntent =
       /reservasi\s*kamar/.test(lower) ||
       (lower.includes('reservasi') && lower.includes('kamar')) ||

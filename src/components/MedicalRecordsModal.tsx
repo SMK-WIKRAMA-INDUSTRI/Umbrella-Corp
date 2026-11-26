@@ -1,41 +1,152 @@
-import React, { useState } from 'react';
-import { X, FileText, Download, Calendar, Stethoscope, FlaskConical, MapPin } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { X, FileText, Download, FlaskConical } from 'lucide-react';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 interface MedicalRecordsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const mockRecords = [
-  {
-    id: 'MR-2024-001',
-    date: '12 Mar 2024',
-    doctor: 'dr. Andi Pratama, Sp.PD',
-    diagnosis: 'Gastritis akut',
-    lab: 'CBC, H. pylori',
-    status: 'Selesai',
-  },
-  {
-    id: 'MR-2024-002',
-    date: '05 Jun 2024',
-    doctor: 'dr. Siti Rahma, Sp.JP',
-    diagnosis: 'Hipertensi stage 1',
-    lab: 'EKG, Lipid profile',
-    status: 'Selesai',
-  },
-  {
-    id: 'MR-2024-003',
-    date: '18 Sep 2024',
-    doctor: 'dr. Budi Santoso, Sp.OT',
-    diagnosis: 'Low back pain',
-    lab: 'Rontgen lumbal',
-    status: 'Dalam proses',
-  },
-];
+interface MedicalRecordRow {
+  id: string;
+  record_no: string;
+  patient_name: string | null;
+  patient_username: string | null;
+  visit_date: string;
+  doctor: string | null;
+  diagnosis: string | null;
+  lab: string | null;
+  status: string | null;
+}
+
+interface MedicalRecord {
+  id: string;
+  no: string;
+  date: string;
+  doctor: string;
+  diagnosis: string;
+  lab: string;
+  status: string;
+}
+
+const formatDate = (iso: string): string => {
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return iso;
+  }
+};
 
 export const MedicalRecordsModal: React.FC<MedicalRecordsModalProps> = ({ isOpen, onClose }) => {
-  const [tab, setTab] = useState<'ringkasan' | 'riwayat' | 'lab'>('ringkasan');
+  const { profile } = useAuth();
+  const [tab, setTab] = useState<'ringkasan' | 'riwayat' | 'lab' | 'daftar'>('ringkasan');
+  const [records, setRecords] = useState<MedicalRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [patientLabel, setPatientLabel] = useState<string>('');
+  const [formPatient, setFormPatient] = useState('');
+  const [formPatientTouched, setFormPatientTouched] = useState(false);
+  const [formPoli, setFormPoli] = useState('Poli Penyakit Dalam');
+  const [formDoctor, setFormDoctor] = useState('');
+  const [formComplaint, setFormComplaint] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [formMsg, setFormMsg] = useState<string | null>(null);
+
+  const fetchRecords = useCallback(async () => {
+    if (!isOpen) return;
+    setLoading(true);
+    setError(null);
+    try {
+      if (!isSupabaseConfigured) {
+        setError('Supabase belum dikonfigurasi. Data rekam medis tidak dapat dimuat.');
+        setRecords([]);
+        return;
+      }
+
+      const { data, error: dbError } = await supabase
+        .from('medical_records')
+        .select('id, record_no, patient_name, patient_username, visit_date, doctor, diagnosis, lab, status')
+        .order('visit_date', { ascending: false });
+
+      if (dbError) throw dbError;
+
+      const rows = (data as MedicalRecordRow[]) || [];
+      const mapped: MedicalRecord[] = rows.map((r) => ({
+        id: r.id,
+        no: r.record_no,
+        date: formatDate(r.visit_date),
+        doctor: r.doctor || '-',
+        diagnosis: r.diagnosis || '-',
+        lab: r.lab || '-',
+        status: r.status || 'Selesai',
+      }));
+      setRecords(mapped);
+      if (rows.length > 0 && rows[0].patient_name) {
+        setPatientLabel(rows[0].patient_name);
+      }
+    } catch (err: any) {
+      const msg = err?.message || 'Gagal memuat rekam medis dari database.';
+      if (msg.includes('Could not find the table')) {
+        setError('Tabel medical_records belum ada di database. Jalankan file supabase/schema.sql di SQL Editor Supabase, lalu refresh.');
+      } else {
+        setError(msg);
+      }
+      setRecords([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [isOpen]);
+
+  const handleRegisterPoli = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormMsg(null);
+    const patientName = formPatient.trim() || (patientLabel || profile?.full_name || profile?.username || '');
+    if (!patientName || !formComplaint.trim()) {
+      setFormMsg('Nama pasien dan keluhan wajib diisi.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      if (!isSupabaseConfigured) {
+        setFormMsg('Supabase belum dikonfigurasi.');
+        return;
+      }
+      const recordNo = `MR-${Date.now()}`;
+      const { error: dbError } = await supabase.from('medical_records').insert({
+        record_no: recordNo,
+        patient_name: patientName,
+        patient_username: profile?.username || null,
+        visit_date: new Date().toISOString().slice(0, 10),
+        doctor: formDoctor.trim() || formPoli,
+        diagnosis: formComplaint.trim(),
+        lab: '-',
+        status: 'Terdaftar',
+      });
+      if (dbError) throw dbError;
+      setFormMsg('Pendaftaran poli berhasil disimpan ke rekam medis.');
+      setFormComplaint('');
+      await fetchRecords();
+      setTab('riwayat');
+    } catch (err: any) {
+      setFormMsg(err?.message || 'Gagal menyimpan pendaftaran poli.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchRecords();
+    }
+  }, [isOpen, fetchRecords]);
+
   if (!isOpen) return null;
+
+  const displayName = patientLabel || profile?.full_name || profile?.username || 'Pasien';
+  const lastVisit = records.length > 0 ? records[0] : null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -62,6 +173,7 @@ export const MedicalRecordsModal: React.FC<MedicalRecordsModalProps> = ({ isOpen
               { id: 'ringkasan', label: 'Ringkasan' },
               { id: 'riwayat', label: 'Riwayat Pemeriksaan' },
               { id: 'lab', label: 'Hasil Lab' },
+              { id: 'daftar', label: 'Daftar Poli' },
             ].map((t) => (
               <button
                 key={t.id}
@@ -77,27 +189,38 @@ export const MedicalRecordsModal: React.FC<MedicalRecordsModalProps> = ({ isOpen
         </div>
 
         <div className="px-6 py-5 max-h-[60vh] overflow-y-auto">
-          {tab === 'ringkasan' && (
+          {loading && (
+            <div className="py-10 text-center text-sm text-slate-500">Memuat rekam medis dari database...</div>
+          )}
+          {error && !loading && (
+            <div className="py-10 text-center text-sm text-rose-600">{error}</div>
+          )}
+          {!loading && !error && records.length === 0 && (
+            <div className="py-10 text-center text-sm text-slate-500">Belum ada rekam medis tersimpan.</div>
+          )}
+
+          {!loading && !error && records.length > 0 && tab === 'ringkasan' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
                 <p className="text-xs text-slate-500 font-bold uppercase">Pasien</p>
-                <p className="text-sm font-extrabold text-[#0F172A] mt-1">Budi Santoso</p>
-                <p className="text-xs text-slate-500 mt-0.5">MRN: 00012345</p>
+                <p className="text-sm font-extrabold text-[#0F172A] mt-1">{displayName}</p>
+                <p className="text-xs text-slate-500 mt-0.5">Username: {profile?.username || '-'}</p>
               </div>
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
                 <p className="text-xs text-slate-500 font-bold uppercase">Kunjungan Terakhir</p>
-                <p className="text-sm font-extrabold text-[#0F172A] mt-1">18 Sep 2024</p>
-                <p className="text-xs text-slate-500 mt-0.5">dr. Budi Santoso, Sp.OT</p>
+                <p className="text-sm font-extrabold text-[#0F172A] mt-1">{lastVisit?.date || '-'}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{lastVisit?.doctor || '-'}</p>
+                <p className="text-xs text-slate-700 mt-1 font-semibold">{lastVisit?.diagnosis || '-'}</p>
               </div>
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                <p className="text-xs text-slate-500 font-bold uppercase">Status</p>
-                <p className="text-sm font-extrabold text-emerald-600 mt-1">Aktif</p>
-                <p className="text-xs text-slate-500 mt-0.5">3 rekam medis tersimpan</p>
+                <p className="text-xs text-slate-500 font-bold uppercase">Status Terakhir</p>
+                <p className="text-sm font-extrabold text-emerald-600 mt-1">{lastVisit?.status || 'Aktif'}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{records.length} rekam medis tersimpan</p>
               </div>
             </div>
           )}
 
-          {tab === 'riwayat' && (
+          {!loading && !error && records.length > 0 && tab === 'riwayat' && (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -110,9 +233,9 @@ export const MedicalRecordsModal: React.FC<MedicalRecordsModalProps> = ({ isOpen
                   </tr>
                 </thead>
                 <tbody>
-                  {mockRecords.map((r) => (
+                  {records.map((r) => (
                     <tr key={r.id} className="border-b border-slate-50">
-                      <td className="py-3 pr-4 font-semibold text-[#E11D48]">{r.id}</td>
+                      <td className="py-3 pr-4 font-semibold text-[#E11D48]">{r.no}</td>
                       <td className="py-3 pr-4">{r.date}</td>
                       <td className="py-3 pr-4">{r.doctor}</td>
                       <td className="py-3 pr-4">{r.diagnosis}</td>
@@ -128,24 +251,69 @@ export const MedicalRecordsModal: React.FC<MedicalRecordsModalProps> = ({ isOpen
             </div>
           )}
 
-          {tab === 'lab' && (
-            <div className="space-y-3">
-              {mockRecords.map((r) => (
-                <div key={r.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                  <div className="flex items-center gap-3">
-                    <FlaskConical className="w-5 h-5 text-[#E11D48]" />
-                    <div>
-                      <p className="text-sm font-bold text-[#0F172A]">{r.lab}</p>
-                      <p className="text-xs text-slate-500">{r.date} • {r.doctor}</p>
-                    </div>
-                  </div>
-                  <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50">
-                    <Download className="w-3.5 h-3.5" />
-                    Unduh
-                  </button>
-                </div>
-              ))}
-            </div>
+          {!loading && !error && tab === 'daftar' && (
+            <form onSubmit={handleRegisterPoli} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">Nama Pasien</label>
+                <input
+                  value={
+                    formPatientTouched || formPatient
+                      ? formPatient
+                      : (patientLabel || profile?.full_name || profile?.username || '')
+                  }
+                  onChange={(e) => {
+                    setFormPatientTouched(true);
+                    setFormPatient(e.target.value);
+                  }}
+                  className="w-full p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-[#E11D48]"
+                  placeholder="Nama lengkap pasien"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">Poliklinik</label>
+                <select
+                  value={formPoli}
+                  onChange={(e) => setFormPoli(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-[#E11D48]"
+                >
+                  <option>Poli Penyakit Dalam</option>
+                  <option>Poli Anak</option>
+                  <option>Poli Kebidanan & Kandungan</option>
+                  <option>Poli Bedah</option>
+                  <option>Poli Neurologi</option>
+                  <option>Poli Kulit & Estetika</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">Dokter (opsional)</label>
+                <input
+                  value={formDoctor}
+                  onChange={(e) => setFormDoctor(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-[#E11D48]"
+                  placeholder="Nama dokter"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">Keluhan / Diagnosa Awal</label>
+                <textarea
+                  value={formComplaint}
+                  onChange={(e) => setFormComplaint(e.target.value)}
+                  rows={3}
+                  className="w-full p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-[#E11D48] resize-none"
+                  placeholder="Contoh: Demam 3 hari, sakit kepala"
+                />
+              </div>
+              {formMsg && <p className="text-xs text-rose-600">{formMsg}</p>}
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-4 py-2 rounded-lg bg-[#E11D48] hover:bg-[#BE123C] text-white font-semibold text-sm disabled:opacity-60"
+                >
+                  {submitting ? 'Menyimpan...' : 'Daftar Poli'}
+                </button>
+              </div>
+            </form>
           )}
         </div>
 

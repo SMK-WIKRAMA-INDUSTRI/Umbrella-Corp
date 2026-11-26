@@ -276,3 +276,45 @@ create policy "room_bookings_select_all"
   using (true);
 
 grant select, insert on public.room_bookings to anon, authenticated;
+
+-- ============================================
+-- Medical Records (rekam medis digital pasien)
+-- ============================================
+create table if not exists public.medical_records (
+  id uuid primary key default gen_random_uuid(),
+  record_no text not null unique,
+  patient_name text,
+  patient_username text,
+  visit_date date not null default current_date,
+  doctor text,
+  diagnosis text,
+  lab text,
+  status text not null default 'Selesai',
+  created_at timestamptz not null default now()
+);
+
+alter table public.medical_records enable row level security;
+
+drop policy if exists "medical_records_select_all" on public.medical_records;
+create policy "medical_records_select_all"
+  on public.medical_records
+  for select
+  to anon, authenticated
+  using (true);
+
+drop policy if exists "medical_records_insert_all" on public.medical_records;
+create policy "medical_records_insert_all"
+  on public.medical_records
+  for insert
+  to anon, authenticated
+  with check (true);
+
+grant select, insert on public.medical_records to anon, authenticated;
+
+-- seed data (idempotent)
+insert into public.medical_records (record_no, patient_name, patient_username, visit_date, doctor, diagnosis, lab, status)
+values
+  ('MR-2024-001', 'Budi Santoso', null, '2024-03-12', 'dr. Andi Pratama, Sp.PD', 'Gastritis akut', 'CBC, H. pylori', 'Selesai'),
+  ('MR-2024-002', 'Budi Santoso', null, '2024-06-05', 'dr. Siti Rahma, Sp.JP', 'Hipertensi stage 1', 'EKG, Lipid profile', 'Selesai'),
+  ('MR-2024-003', 'Budi Santoso', null, '2024-09-18', 'dr. Budi Santoso, Sp.OT', 'Low back pain', 'Rontgen lumbal', 'Dalam proses')
+on conflict (record_no) do nothing;

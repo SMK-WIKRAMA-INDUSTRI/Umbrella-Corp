@@ -767,7 +767,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="font-extrabold text-sm text-[#0F172A]">VIP Aster</span>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E11D48] text-white whitespace-nowrap shrink-0">
-                          4 Bed Siap
+                          4 Bed
                         </span>
                       </div>
                       <p className="text-xs text-slate-500 mb-2">Lantai 4 Gedung Utama</p>
@@ -789,7 +789,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="font-extrabold text-sm text-[#0F172A]">VIP Melati</span>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E11D48] text-white whitespace-nowrap shrink-0">
-                          2 Bed Siap
+                          2 Bed
                         </span>
                       </div>
                       <p className="text-xs text-slate-500 mb-2">Lantai 4 Wing Timur</p>
@@ -811,7 +811,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="font-extrabold text-sm text-[#0F172A]">VVIP Aster Suite</span>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#0F172A] text-white whitespace-nowrap shrink-0">
-                          2 Suite Siap
+                          2 Suite
                         </span>
                       </div>
                       <p className="text-xs text-slate-500 mb-2">Lantai 5 Penthouse</p>
@@ -1142,7 +1142,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                       className="w-full min-h-[42px] py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs border border-emerald-700 flex items-center justify-center gap-2 transition-all"
                     >
                       <BedDouble className="w-3.5 h-3.5 shrink-0" />
-                      <span>Reservasi Kamar (Catat ke Database)</span>
+                      <span>Reservasi Kamar</span>
                     </button>
                   </div>
 

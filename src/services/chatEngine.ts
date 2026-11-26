@@ -13,8 +13,8 @@ export const getCurrentWIB = (): string => {
  * Membersihkan sintaks Markdown (seperti #, ##, ###, **, *, _)
  * agar teks menjadi plain text yang rapi saat disalin atau ditempel.
  */
-export const stripMarkdown = (text: string): string => {
-  return text
+export const stripMarkdown = (text: any): string => {
+  return String(text ?? '')
     // Hapus header markdown di awal baris: #, ##, ###, dst.
     .replace(/^#{1,6}\s+/gm, '')
     // Hapus tanda blockquote di awal baris: >
