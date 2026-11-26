@@ -25,24 +25,23 @@ const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..600;1,8..60,400..600&display=swap');
 .rch{--base:#f8fafc;--c1:#fecdd3;--c2:#fda4af;--c3:#ffe4e6;--c4:#fff1f2;--ac:225,29,72;--route2:#be123c;--tint:#ffe4e6;--rline:#fecdd3;--route:rgb(var(--ac));--panel:#fff;--ink:#37352f;--ink2:#504e49;--muted:#6b6a65}
 .rch,.rch *{box-sizing:border-box}
-.rch{position:relative;width:100%;height:100vh;min-height:580px;max-height:750px;overflow:hidden;background:var(--base);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.rch{position:relative;width:100%;height:auto;min-height:0;max-height:none;display:flex;flex-direction:column;align-items:center;overflow:hidden;background:var(--base);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 @media(max-width:768px){
-  .rch{height:auto!important;min-height:0!important;max-height:none!important;display:flex;flex-direction:column;padding-bottom:0}
-  .rch .hero{order:1;position:relative!important;top:auto!important;left:auto!important;right:auto!important;padding:28px 18px 0!important}
+  .rch .hero{padding:28px 18px 0!important}
   .rch .kick{font-size:11px!important;letter-spacing:.1em!important}
   .rch h1{margin-top:12px!important;font-size:clamp(32px,8.8vw,44px)!important;letter-spacing:-0.03em!important;line-height:1.15!important}
   .rch .ph{white-space:normal!important}
   .rch .lead{margin-top:14px!important;font-size:14.5px!important;line-height:1.6!important;padding:0 4px!important}
   .rch .ctas{margin-top:20px!important;flex-wrap:wrap!important;gap:10px!important;padding:0 4px}
   .rch .ctas .btn{height:44px!important;padding:0 16px!important;font-size:14px!important;flex:1 1 140px;max-width:220px;white-space:nowrap}
-  .rch .beacon{order:2;position:relative!important;top:auto!important;left:auto!important;margin:24px auto 0!important;width:52px!important;height:52px!important}
+  .rch .beacon{margin:24px auto 0!important;width:52px!important;height:52px!important}
   .rch .btile{border-radius:15px}
   .rch .btile img{width:23px;height:27px}
-  .rch .compose{order:3;position:relative!important;top:auto!important;left:auto!important;margin:10px auto 0!important;min-height:30px;display:flex;justify-content:center}
-  .rch .compose .cen{position:relative!important;left:auto!important;transform:none!important;max-width:calc(100vw - 24px)}
-  .rch .cbox{font-size:12px!important;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-  .rch .crowd{order:4;position:relative!important;top:auto!important;left:auto!important;right:auto!important;margin-top:52px!important;height:215px!important}
-  .rch .tbox{font-size:11.5px!important;height:32px!important;padding:0 10px 0 6px!important;max-width:calc(100vw - 28px);overflow:hidden;text-overflow:ellipsis}
+  .rch .compose{margin:10px auto 0!important}
+  .rch .compose .cen{max-width:calc(100vw - 24px)}
+  .rch .cbox{font-size:12px!important}
+  .rch .crowd{margin-top:52px!important;height:215px!important}
+  .rch .tbox{font-size:11.5px!important;height:32px!important;padding:0 10px 0 6px!important;max-width:calc(100vw - 28px)}
 }
 .rch a{color:inherit;text-decoration:none}
 .rch .bg{position:absolute;inset:0;overflow:hidden;background:var(--base)}
@@ -70,10 +69,10 @@ const CSS = `
 .rch .btn.ghost{border-color:transparent;background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
 .rch .btn.pri{border-color:transparent;background:var(--route);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 10px 24px -10px rgba(var(--ac),.75)}
 .rch .btn.pri:hover{background:var(--route2);transform:translateY(-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 16px 30px -10px rgba(var(--ac),.8)}
-.rch .hero{position:absolute;z-index:6;left:0;right:0;top:24px;text-align:center}
+.rch .hero{order:1;position:relative;z-index:6;top:auto;left:auto;right:auto;padding:48px 24px 0;text-align:center;max-width:1120px;margin:0 auto}
 .rch .kick{display:inline-flex;align-items:center;gap:10px;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
 .rch .kick i{width:6px;height:6px;border-radius:50%;background:var(--route);box-shadow:0 0 0 4px rgba(var(--ac),.16)}
-.rch h1{margin:18px 0 0;font-family:"Source Serif 4",ui-serif,Georgia,serif;font-size:88px;line-height:1.05;letter-spacing:-2.6px;font-weight:400}
+.rch h1{margin:16px 0 0;font-family:"Source Serif 4",ui-serif,Georgia,serif;font-size:clamp(36px,5.2vw,74px);line-height:1.08;letter-spacing:-2px;font-weight:400}
 .rch h1 .w{display:inline-block}
 .rch h1 em{font-style:italic;color:var(--route)}
 .rch .ph{position:relative;white-space:nowrap}
@@ -81,19 +80,19 @@ const CSS = `
 .rch .ph.hit::after{animation:rch-mark 1.8s cubic-bezier(.5,0,.2,1)}
 .rch .ph.lit::after{transform:none;opacity:1}
 @keyframes rch-mark{0%{transform:scaleX(0);opacity:1}28%{transform:scaleX(1);opacity:1}76%{transform:scaleX(1);opacity:1}100%{transform:scaleX(1);opacity:0}}
-.rch .lead{max-width:900px;margin:22px auto 0;font-size:18px;line-height:1.6;color:var(--muted)}
-.rch .ctas{display:flex;justify-content:center;gap:10px;margin-top:26px}
-.rch .ctas .btn{height:48px;padding:0 22px;border-radius:12px;font-size:15.5px;font-weight:600}
-.rch .beacon{position:absolute;z-index:5;left:50%;top:414px;width:60px;height:60px;margin-left:-30px}
-.rch .btile{width:100%;height:100%;border-radius:18px;background:var(--route);display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 0 0 6px rgba(255,255,255,.6),0 0 0 7px rgba(var(--ac),.16),0 18px 34px -12px rgba(var(--ac),.75)}
-.rch .btile img{width:27px;height:31px;display:block}
-.rch .compose{position:absolute;z-index:5;left:50%;top:488px;pointer-events:none}
-.rch .cen{position:absolute;left:0;top:0;transform:translateX(-50%);width:max-content}
+.rch .lead{max-width:820px;margin:18px auto 0;font-size:16.5px;line-height:1.6;color:var(--muted)}
+.rch .ctas{display:flex;justify-content:center;gap:12px;margin-top:24px}
+.rch .ctas .btn{height:46px;padding:0 22px;border-radius:12px;font-size:15px;font-weight:600}
+.rch .beacon{order:2;position:relative;z-index:5;top:auto;left:auto;margin:28px auto 0;width:56px;height:56px}
+.rch .btile{width:100%;height:100%;border-radius:17px;background:var(--route);display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 0 0 6px rgba(255,255,255,.6),0 0 0 7px rgba(var(--ac),.16),0 18px 34px -12px rgba(var(--ac),.75)}
+.rch .btile img{width:25px;height:29px;display:block}
+.rch .compose{order:3;position:relative;z-index:5;top:auto;left:auto;margin:10px auto 0;min-height:30px;display:flex;justify-content:center;pointer-events:none}
+.rch .cen{position:relative;left:auto;top:auto;transform:none;width:max-content}
 .rch .cbox{display:flex;align-items:center;gap:8px;height:30px;padding:0 13px 0 5px;border-radius:999px;background:rgba(255,255,255,.92);border:1px solid rgba(55,53,47,.08);box-shadow:0 14px 30px -14px rgba(30,40,35,.4);font-size:13px;white-space:nowrap;transform:scale(0);transform-origin:50% 0}
 .rch .cbox .lab{height:20px;padding:0 8px;border-radius:999px;background:var(--tint);color:var(--route2);font:500 11px/20px "JetBrains Mono",ui-monospace,monospace}
 .rch .caret{width:1.5px;height:14px;margin-left:-6px;background:var(--route);animation:rch-blink 1s steps(1) infinite}
 @keyframes rch-blink{50%{opacity:0}}
-.rch .crowd{position:absolute;z-index:2;left:0;right:0;top:540px;height:360px;pointer-events:none}
+.rch .crowd{order:4;position:relative;z-index:2;top:auto;left:auto;right:auto;width:100%;margin-top:36px;height:280px;pointer-events:none;overflow:hidden}
 .rch .pw{position:absolute;left:0}
 .rch .pe{width:100%;height:100%;will-change:transform;transform-origin:50% 88%}
 .rch .hp{position:relative;width:100%;height:100%}

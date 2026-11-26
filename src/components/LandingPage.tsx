@@ -662,7 +662,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
       </section>
 
       {/* Pusat Eksplorasi Pasien & Fasilitas Rumah Sakit (Fitur Interaktif Nyata & Edukatif) */}
-      <section id="fitur-layanan" className="py-12 sm:py-24 max-w-[1300px] mx-auto px-4 sm:px-6 w-full">
+      <section id="fitur-layanan" className="pt-8 sm:pt-14 pb-12 sm:pb-24 max-w-[1300px] mx-auto px-4 sm:px-6 w-full">
 
         {/* Header Bagian: Terpusat, Elegan, Interaktif */}
         <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-12 space-y-3">
