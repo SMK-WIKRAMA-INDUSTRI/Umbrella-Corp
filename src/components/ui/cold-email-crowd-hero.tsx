@@ -25,7 +25,25 @@ const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..600;1,8..60,400..600&display=swap');
 .rch{--base:#f8fafc;--c1:#fecdd3;--c2:#fda4af;--c3:#ffe4e6;--c4:#fff1f2;--ac:225,29,72;--route2:#be123c;--tint:#ffe4e6;--rline:#fecdd3;--route:rgb(var(--ac));--panel:#fff;--ink:#37352f;--ink2:#504e49;--muted:#6b6a65}
 .rch,.rch *{box-sizing:border-box}
-.rch{position:relative;width:100%;height:100vh;min-height:720px;overflow:hidden;background:var(--base);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.rch{position:relative;width:100%;height:100vh;min-height:580px;max-height:750px;overflow:hidden;background:var(--base);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+@media(max-width:768px){
+  .rch{height:auto!important;min-height:0!important;max-height:none!important;display:flex;flex-direction:column;padding-bottom:0}
+  .rch .hero{order:1;position:relative!important;top:auto!important;left:auto!important;right:auto!important;padding:28px 18px 0!important}
+  .rch .kick{font-size:11px!important;letter-spacing:.1em!important}
+  .rch h1{margin-top:12px!important;font-size:clamp(32px,8.8vw,44px)!important;letter-spacing:-0.03em!important;line-height:1.15!important}
+  .rch .ph{white-space:normal!important}
+  .rch .lead{margin-top:14px!important;font-size:14.5px!important;line-height:1.6!important;padding:0 4px!important}
+  .rch .ctas{margin-top:20px!important;flex-wrap:wrap!important;gap:10px!important;padding:0 4px}
+  .rch .ctas .btn{height:44px!important;padding:0 16px!important;font-size:14px!important;flex:1 1 140px;max-width:220px;white-space:nowrap}
+  .rch .beacon{order:2;position:relative!important;top:auto!important;left:auto!important;margin:24px auto 0!important;width:52px!important;height:52px!important}
+  .rch .btile{border-radius:15px}
+  .rch .btile img{width:23px;height:27px}
+  .rch .compose{order:3;position:relative!important;top:auto!important;left:auto!important;margin:10px auto 0!important;min-height:30px;display:flex;justify-content:center}
+  .rch .compose .cen{position:relative!important;left:auto!important;transform:none!important;max-width:calc(100vw - 24px)}
+  .rch .cbox{font-size:12px!important;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  .rch .crowd{order:4;position:relative!important;top:auto!important;left:auto!important;right:auto!important;margin-top:52px!important;height:215px!important}
+  .rch .tbox{font-size:11.5px!important;height:32px!important;padding:0 10px 0 6px!important;max-width:calc(100vw - 28px);overflow:hidden;text-overflow:ellipsis}
+}
 .rch a{color:inherit;text-decoration:none}
 .rch .bg{position:absolute;inset:0;overflow:hidden;background:var(--base)}
 .rch .bg i{position:absolute;border-radius:50%;filter:blur(80px);opacity:.18;will-change:transform}
@@ -115,19 +133,31 @@ export function ColdEmailCrowdHero({ brand = "Umbrella Healthcare", data = DEFAU
     const ease = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 
     const fx = $(".fx") as HTMLCanvasElement, g = fx.getContext("2d")!, dpr = Math.min(devicePixelRatio || 1, 2);
+    const crowd = $(".crowd"), beaconEl = $(".beacon");
     let W = root.clientWidth, H = root.clientHeight;
-    const size = () => { W = root.clientWidth; H = root.clientHeight; fx.width = W * dpr; fx.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0); };
+    let BY = 444, TOP = 540, BH = 360;
+    const syncLayoutMetrics = () => {
+      if (beaconEl) BY = beaconEl.offsetTop + beaconEl.offsetHeight / 2;
+      if (crowd) { TOP = crowd.offsetTop; BH = crowd.offsetHeight || 360; }
+    };
+    const size = () => {
+      W = root.clientWidth; H = root.clientHeight;
+      fx.width = W * dpr; fx.height = H * dpr;
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      syncLayoutMetrics();
+    };
     size();
     const ro = new ResizeObserver(size); ro.observe(root);
+    const heroEl = $(".hero"); if (heroEl) ro.observe(heroEl);
 
     const AC = getComputedStyle(root).getPropertyValue("--ac").trim() || "225,29,72", COL = `rgb(${AC})`, al = (o: number) => `rgba(${AC},${o})`;
-    const BY = 444, TOP = 540, BH = 360;
 
-    const crowd = $(".crowd"), P: any[] = [];
+    const P: any[] = [];
     crowd.innerHTML = "";
     const fade = (p: any) => `blur(${Math.max(0, (74 - p.t) * 0.045).toFixed(2)}px) contrast(${(0.36 + 0.3 * p.depth).toFixed(2)}) brightness(${(1 / (0.68 + 0.15 * p.depth)).toFixed(2)})`;
     function place(p: any, anywhere: boolean) {
-      p.t = 31 + rnd() * 54; p.depth = (p.t - 31) / 54; p.w = 146 + (p.t - 31.8) * 2.62; p.h = p.w * 1.35;
+      const mobileScale = W < 640 ? Math.max(0.68, W / 580) : 1;
+      p.t = 31 + rnd() * 54; p.depth = (p.t - 31) / 54; p.w = (146 + (p.t - 31.8) * 2.62) * mobileScale; p.h = p.w * 1.35;
       p.dir = rnd() < 0.5 ? 1 : -1; p.speed = 108 / (12 + rnd() * 26); p.x = anywhere ? -4 + rnd() * 108 : p.dir > 0 ? -10 : 110;
       p.v = 1; p.state = "walk"; p.reached = false; p.ph = rnd() * 6.283; p.f = 1.5 + p.speed * 0.22; p.bob = 0; p.px = (p.x / 100) * W;
       p.el.className = "pw"; p.el.style.cssText = `top:${p.t.toFixed(2)}%;width:${p.w.toFixed(1)}px;height:${p.h.toFixed(1)}px;z-index:${p.t | 0}`;
@@ -164,10 +194,12 @@ export function ColdEmailCrowdHero({ brand = "Umbrella Healthcare", data = DEFAU
     let side = 1, di = 0, nextAt = 0.6;
     function pick() {
       const act = S.filter((s) => s.p).map((s) => s.p.px), cx = W / 2;
+      const minCenterDist = Math.min(120, W * 0.14);
+      const minPairDist = Math.min(400, W * 0.55);
       const ok = (p: any) => {
         if (p.state !== "walk" || p.reached || p.t < 47) return false;
         const f = p.px + ((p.dir * p.speed) / 100) * W * 2.4;
-        return p.px > W * 0.13 && p.px < W * 0.87 && f > W * 0.1 && f < W * 0.9 && Math.abs(p.px - cx) > 120 && act.every((a) => Math.abs(a - p.px) > 400);
+        return p.px > W * 0.13 && p.px < W * 0.87 && f > W * 0.1 && f < W * 0.9 && Math.abs(p.px - cx) > minCenterDist && act.every((a) => Math.abs(a - p.px) > minPairDist);
       };
       let c = P.filter(ok); const pref = c.filter((p) => (p.px - cx) * side > 0); if (pref.length) c = pref;
       if (!c.length) return null; side = -side; return c[(rnd() * c.length) | 0];
@@ -241,8 +273,11 @@ export function ColdEmailCrowdHero({ brand = "Umbrella Healthcare", data = DEFAU
         if (a >= 7.1) { s.p = null; continue; }
         if (draw) {
           const [hx, hy] = head(p); s.hx = hx; s.ty = hy - p.h * 0.21 - 14;
-          let lift = 0; for (const o of S) if (o !== s && o.p && o.t0 < s.t0 && Math.abs(o.hx - hx) < 350 && Math.abs(o.ty - s.ty) < 46) lift = -46;
-          s.ly += (lift - s.ly) * Math.min(1, dt * 8); s.tip.style.transform = `translate(${hx.toFixed(1)}px,${(s.ty + s.ly).toFixed(1)}px)`; drawReach(s, a, now, hx, hy);
+          const pairX = Math.min(350, W * 0.75);
+          let lift = 0; for (const o of S) if (o !== s && o.p && o.t0 < s.t0 && Math.abs(o.hx - hx) < pairX && Math.abs(o.ty - s.ty) < 46) lift = -46;
+          const pad = Math.min(130, W * 0.34);
+          const tipX = W < 640 ? Math.max(pad, Math.min(W - pad, hx)) : hx;
+          s.ly += (lift - s.ly) * Math.min(1, dt * 8); s.tip.style.transform = `translate(${tipX.toFixed(1)}px,${(s.ty + s.ly).toFixed(1)}px)`; drawReach(s, a, now, hx, hy);
         }
       }
       if (comp) { const L = comp.d.line, n = Math.ceil(Math.min(1, (now - comp.t0) / 0.8) * L.length); if (n !== comp.n) { comp.n = n; ctxt.textContent = L.slice(0, n); } }

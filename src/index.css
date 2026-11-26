@@ -67,6 +67,17 @@
   background: #94A3B8;
 }
 
+/* Hide scrollbars cleanly for horizontal touch carousels/chips on mobile */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* Typing indicator wave */
 @keyframes typing-wave {
   0%, 60%, 100% {

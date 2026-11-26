@@ -1158,18 +1158,18 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
     <div className="flex-1 h-full min-h-0 flex flex-col bg-slate-50/70 select-text relative">
 
       {/* Area Chat Utama: Berpusat, Nyaman & Pas Layar */}
-      <div className={`flex-1 overflow-y-auto px-4 sm:px-6 py-2 sm:py-3 min-h-0 flex flex-col items-center ${messages.length === 0 ? 'justify-center' : 'justify-start'}`}>
-        <div className={`w-full max-w-3xl flex-1 flex flex-col ${messages.length === 0 ? 'justify-center' : 'justify-between'}`}>
+      <div className="flex-1 overflow-y-auto px-3.5 sm:px-6 py-3 min-h-0 flex flex-col items-center justify-start">
+        <div className={`w-full max-w-3xl flex-1 flex flex-col ${messages.length === 0 ? 'justify-start' : 'justify-between'}`}>
 
           {messages.length === 0 ? (
             /* ============================================================ */
             /* EMPTY STATE: Tampilan Awal yang Tenang & Terstruktur         */
             /* ============================================================ */
-            <div className="my-auto py-4 flex flex-col items-center text-center select-none w-full max-w-2xl mx-auto">
+            <div className="my-auto py-3 sm:py-4 flex flex-col items-center text-center select-none w-full max-w-2xl mx-auto">
 
               {/* Logo RS Umbrella */}
-              <div className="mb-4 w-12 h-12 rounded-xl bg-[#E11D48] flex items-center justify-center text-white">
-                <UmbrellaLogo size={26} />
+              <div className="mb-3.5 sm:mb-4 w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#E11D48] flex items-center justify-center text-white">
+                <UmbrellaLogo size={24} />
               </div>
 
               {/* Judul & Pengantar */}
@@ -1177,10 +1177,10 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
                 <p className="text-xs font-medium text-slate-500">
                   Layanan Informasi Pasien 24 Jam
                 </p>
-                <h1 className="text-2xl sm:text-[26px] font-semibold text-[#0F172A] tracking-tight leading-snug">
+                <h1 className="text-xl sm:text-[26px] font-semibold text-[#0F172A] tracking-tight leading-snug">
                   Ada yang bisa kami bantu hari ini?
                 </h1>
-                <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto font-normal leading-relaxed">
+                <p className="text-[13px] sm:text-sm text-slate-600 max-w-lg mx-auto font-normal leading-relaxed">
                   Tanyakan jadwal dokter spesialis, kamar rawat inap, ketentuan rujukan BPJS, atau layanan IGD RS Umbrella.
                 </p>
               </div>
@@ -1253,9 +1253,9 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
                 if (m.sender === 'user') {
                   return (
                     <div key={m.id} className="flex flex-col items-end animate-fade-in">
-                      <div className="flex items-end space-x-2.5 max-w-[90%] sm:max-w-[78%]">
+                      <div className="flex items-end space-x-2 sm:space-x-2.5 max-w-[90%] sm:max-w-[78%]">
                         <div
-                          className={`bg-[#0F172A] text-white rounded-2xl rounded-br-xs px-4 py-3 sm:px-5 sm:py-3.5 shadow-sm leading-relaxed text-left font-normal ${seniorMode ? 'text-base sm:text-lg leading-relaxed' : 'text-xs sm:text-sm'
+                          className={`bg-[#0F172A] text-white rounded-2xl rounded-br-xs px-4 py-3 sm:px-5 sm:py-3.5 shadow-sm leading-relaxed text-left font-normal ${seniorMode ? 'text-base sm:text-lg leading-relaxed' : 'text-[13.5px] sm:text-sm'
                             }`}
                         >
                           {m.text}
@@ -1264,7 +1264,7 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
                           <User className="w-4 h-4 text-slate-600" />
                         </div>
                       </div>
-                      <span className="text-[10px] text-slate-400 mt-1 mr-9 px-1">
+                      <span className="text-[10.5px] text-slate-400 mt-1 mr-9 px-1">
                         {m.timestamp}
                       </span>
                     </div>
@@ -1290,20 +1290,20 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex-1 min-w-0 max-w-[92%] sm:max-w-[85%]">
+                    <div className="flex-1 min-w-0 max-w-[90%] sm:max-w-[85%]">
                       {/* Bar Informasi Pengirim */}
-                      <div className="flex items-center justify-between pb-1.5 px-0.5">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-semibold text-xs sm:text-sm text-[#0F172A]">
+                      <div className="flex items-center justify-between gap-2 pb-1.5 px-0.5">
+                        <div className="flex items-center space-x-2 min-w-0">
+                          <span className="font-semibold text-xs sm:text-sm text-[#0F172A] truncate">
                             Umbrella AI Assistant
                           </span>
-                          <span className="text-[11px] text-slate-400 tabular-nums">{m.timestamp}</span>
+                          <span className="text-[11px] text-slate-400 tabular-nums whitespace-nowrap shrink-0">{m.timestamp}</span>
                         </div>
 
                         {/* Tombol Suara (Text-to-Speech) */}
                         <button
                           onClick={() => handleToggleSpeak(m.id, m.text)}
-                          className={`inline-flex items-center space-x-1 text-xs px-2.5 py-1 rounded-lg border transition-colors ${isSpeaking
+                          className={`inline-flex items-center space-x-1 text-xs px-2.5 py-1.5 sm:py-1 rounded-lg border transition-colors whitespace-nowrap shrink-0 ${isSpeaking
                             ? 'bg-rose-50 text-[#BE123C] border-rose-200 font-medium'
                             : 'bg-white text-slate-500 border-[#E2E8F0] hover:text-[#0F172A] hover:border-slate-300'
                             }`}
@@ -1325,12 +1325,12 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
 
                       {/* Bubble Respon AI Medis */}
                       <div
-                        className={`p-4 sm:p-5 rounded-2xl rounded-tl-xs border ${m.isError
+                        className={`p-3.5 sm:p-5 rounded-2xl rounded-tl-xs border ${m.isError
                           ? 'bg-rose-50 border-rose-200 text-rose-900'
                           : isSpeaking
                             ? 'bg-white border-[#E11D48] text-slate-900'
                             : 'bg-white border-[#E2E8F0] text-slate-800'
-                          } ${seniorMode ? 'text-base sm:text-[17px] leading-relaxed sm:leading-loose' : 'text-[13px] sm:text-sm leading-relaxed'}`}
+                          } ${seniorMode ? 'text-base sm:text-[17px] leading-relaxed sm:leading-loose' : 'text-[13.5px] sm:text-sm leading-relaxed'}`}
                       >
                         {renderFormattedText(m.text)}
                       </div>
@@ -1517,20 +1517,20 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
                 setIsVoiceCallDialogOpen(true);
               }}
               disabled={isLoading || isListening || isTranscribing || isVoiceCallActive}
-              className="flex-shrink-0 inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#E11D48] hover:bg-[#BE123C] text-white text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-shrink-0 inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#E11D48] hover:bg-[#BE123C] text-white text-xs font-semibold whitespace-nowrap transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Mulai percakapan suara dengan Dewi"
             >
-              <PhoneCall className="w-3.5 h-3.5" strokeWidth={1.75} />
+              <PhoneCall className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
               <span>Telepon CS</span>
             </button>
             {messages.length > 0 && (
               <button
                 type="button"
                 onClick={onClearChat}
-                className="flex-shrink-0 inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-[#E2E8F0] text-xs font-medium transition-colors"
+                className="flex-shrink-0 inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-[#E2E8F0] text-xs font-semibold whitespace-nowrap transition-colors"
                 title="Bersihkan percakapan dan mulai topik baru"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-slate-500" strokeWidth={1.75} />
+                <RotateCcw className="w-3.5 h-3.5 text-slate-500 shrink-0" strokeWidth={1.75} />
                 <span>Reset Chat</span>
               </button>
             )}
@@ -1543,7 +1543,7 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
                 type="button"
                 disabled={isLoading}
                 onClick={() => onSendMessage(chip.query)}
-                className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-[#E2E8F0] text-xs font-medium transition-colors disabled:opacity-50"
+                className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-[#E2E8F0] text-xs font-semibold whitespace-nowrap transition-colors disabled:opacity-50"
               >
                 {chip.label}
               </button>
@@ -1595,8 +1595,8 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
               onChange={handleTextareaInput}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
-              placeholder="Tanyakan keluhan, jadwal dokter spesialis, kamar VIP, atau alur BPJS..."
-              className={`w-full py-2 pl-3 pr-28 bg-transparent focus:outline-none resize-none leading-relaxed placeholder:text-slate-400 text-slate-800 transition-all ${seniorMode ? 'text-base' : 'text-xs sm:text-sm'
+              placeholder="Tanyakan keluhan, jadwal dokter, kamar VIP, atau BPJS..."
+              className={`flex-1 min-w-0 py-2 pl-3 pr-2 bg-transparent focus:outline-none resize-none leading-relaxed placeholder:text-slate-400 text-slate-800 transition-all ${seniorMode ? 'text-base' : 'text-sm'
                 }`}
               style={{ minHeight: '40px', maxHeight: '120px' }}
             />
@@ -1612,7 +1612,7 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
             />
 
             {/* Action Buttons Zone: Clear, Upload PDF, Mic STT, Kirim */}
-            <div className="flex items-center space-x-1.5 pb-1 pr-1 flex-shrink-0">
+            <div className="flex items-center space-x-1 sm:space-x-1.5 pb-0.5 pr-0.5 flex-shrink-0">
               {/* Clear Text button */}
               {inputText.trim().length > 0 && !isListening && (
                 <button
@@ -1621,7 +1621,7 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
                     setInputText('');
                     if (textareaRef.current) textareaRef.current.style.height = 'auto';
                   }}
-                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-colors"
+                  className="p-2.5 sm:p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-colors"
                   title="Hapus ketikan"
                 >
                   <X className="w-4 h-4" />
@@ -1633,7 +1633,7 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isProcessingDoc || isLoading}
-                className="p-2 rounded-xl text-slate-500 hover:text-[#E11D48] hover:bg-rose-50 transition-colors"
+                className="p-2.5 sm:p-2 rounded-xl text-slate-500 hover:text-[#E11D48] hover:bg-rose-50 transition-colors"
                 title="Unggah PDF/Dokumen agar chatbot membacanya"
               >
                 {isProcessingDoc ? (
@@ -1648,7 +1648,7 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
                 type="button"
                 onClick={toggleSpeechRecognition}
                 disabled={isTranscribing || isLoading}
-                className={`p-2 rounded-xl transition-all flex items-center justify-center ${isListening
+                className={`p-2.5 sm:p-2 rounded-xl transition-all flex items-center justify-center ${isListening
                   ? 'bg-rose-500 text-white ring-4 ring-rose-200 animate-pulse shadow-md'
                   : isTranscribing
                     ? 'bg-rose-50 text-rose-600 cursor-wait'
@@ -1673,24 +1673,24 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
               <button
                 type="submit"
                 disabled={!inputText.trim() || isLoading || isListening}
-                className={`p-2 sm:px-3.5 sm:py-2 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5 transition-all shadow-sm ${!inputText.trim() || isLoading || isListening
+                className={`p-2.5 sm:px-3.5 sm:py-2 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5 transition-all shadow-sm ${!inputText.trim() || isLoading || isListening
                   ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                   : 'bg-[#E11D48] hover:bg-[#BE123C] text-white active:scale-95 shadow-rose-500/25'
                   }`}
                 title="Kirim pertanyaan ke Asisten AI"
               >
                 <span className="hidden sm:inline">Kirim</span>
-                <Send className="w-3.5 h-3.5" />
+                <Send className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
               </button>
             </div>
           </form>
 
           {/* Petunjuk & Catatan Kaki */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-1 text-[11px] text-slate-400 px-1">
-            <span>
+          <div className="flex items-center justify-center sm:justify-between gap-2 text-[11px] text-slate-400 px-1">
+            <span className="hidden sm:inline">
               Tekan <kbd className="px-1.5 py-0.5 rounded bg-slate-100 border border-[#E2E8F0] text-slate-600 font-mono">Enter</kbd> untuk kirim, <kbd className="px-1.5 py-0.5 rounded bg-slate-100 border border-[#E2E8F0] text-slate-600 font-mono">Shift + Enter</kbd> untuk baris baru
             </span>
-            <span className="text-slate-500">
+            <span className="text-slate-500 text-center">
               RS PT Umbrella Corp • Layanan Informasi Pasien
             </span>
           </div>

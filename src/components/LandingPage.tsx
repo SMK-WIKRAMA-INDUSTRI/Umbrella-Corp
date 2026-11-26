@@ -351,30 +351,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col font-sans selection:bg-rose-100 selection:text-rose-900">
+    <div className="min-h-screen overflow-x-clip bg-[#F8FAFC] text-[#0F172A] flex flex-col font-sans selection:bg-rose-100 selection:text-rose-900">
 
       {/* Header Navigasi Atas Responsif (Hamburger Menu di Mobile & Tablet, Jelly Pill di Desktop) */}
-      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] shadow-sm select-none">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-5 flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-50 w-full bg-white border-b border-[#E2E8F0] shadow-sm select-none">
+        <div className="max-w-[1440px] mx-auto px-3.5 sm:px-6 lg:px-8 py-3 sm:py-5 flex items-center justify-between gap-2 sm:gap-4">
 
           {/* Logo & Identitas Brand (Kiri) */}
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center space-x-3 sm:space-x-3.5 text-left group transition-all min-w-0"
+            className="flex items-center space-x-2.5 sm:space-x-3.5 text-left group transition-all min-w-0"
             title="Umbrella Healthcare"
           >
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#E11D48] flex items-center justify-center text-white shadow-md shadow-rose-500/25 flex-shrink-0 transition-transform hover:scale-105">
-              <UmbrellaLogo size={24} className="sm:hidden" />
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#E11D48] flex items-center justify-center text-white shadow-md shadow-rose-500/25 flex-shrink-0 transition-transform hover:scale-105">
+              <UmbrellaLogo size={22} className="sm:hidden" />
               <div className="hidden sm:block">
                 <UmbrellaLogo size={28} />
               </div>
             </div>
             <div className="min-w-0">
-              <div className="flex items-center space-x-1.5 sm:space-x-2">
-                <span className="font-extrabold text-lg sm:text-2xl tracking-tight text-[#0F172A]">
+              <div className="flex items-center space-x-1 sm:space-x-2 whitespace-nowrap">
+                <span className="font-extrabold text-base sm:text-2xl tracking-tight text-[#0F172A]">
                   Umbrella
                 </span>
-                <span className="font-bold text-lg sm:text-2xl tracking-tight text-[#E11D48]">
+                <span className="font-bold text-base sm:text-2xl tracking-tight text-[#E11D48]">
                   Healthcare
                 </span>
               </div>
@@ -492,19 +492,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
           </div>
 
           {/* Sisi Kanan: Mobile / Tablet Controls (Tombol Chat Cepat + Tombol Hamburger Menu) */}
-          <div className="lg:hidden flex items-center space-x-2">
+          <div className="lg:hidden flex items-center space-x-2 shrink-0">
             <button
               onClick={() => handleLaunchAssistant()}
-              className="px-3.5 py-2 rounded-full bg-rose-50 text-[#E11D48] border border-rose-200 text-xs font-bold flex items-center space-x-1.5 active:scale-95 shadow-2xs"
+              className="px-3 py-2 rounded-full bg-rose-50 text-[#E11D48] border border-rose-200 text-xs font-bold flex items-center space-x-1.5 active:scale-95 shadow-2xs whitespace-nowrap shrink-0"
             >
-              <span className="w-2 h-2 rounded-full bg-[#E11D48] animate-pulse"></span>
+              <span className="w-2 h-2 rounded-full bg-[#E11D48] animate-pulse shrink-0"></span>
               <span>Chat AI</span>
             </button>
 
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2.5 rounded-xl sm:rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-[#E11D48] transition-all border border-slate-200/80 active:scale-95 focus:outline-none"
+              className="p-2.5 rounded-xl sm:rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-[#E11D48] transition-all border border-slate-200/80 active:scale-95 focus:outline-none shrink-0"
               aria-label={isMobileMenuOpen ? 'Tutup Menu Navigasi' : 'Buka Menu Navigasi'}
             >
               {isMobileMenuOpen ? (
@@ -521,21 +521,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
         {isMobileMenuOpen && (
           <div
             onClick={() => setIsMobileMenuOpen(false)}
-            className="lg:hidden fixed inset-0 top-[61px] sm:top-[77px] bg-slate-950/40 backdrop-blur-sm z-30 transition-opacity animate-fade-in"
+            className="lg:hidden fixed inset-0 top-[61px] sm:top-[77px] bg-slate-950/60 backdrop-blur-sm z-40 transition-opacity animate-fade-in"
           />
         )}
 
-        {/* Panel Mobile Hamburger Drawer */}
+        {/* Panel Mobile Hamburger Drawer (Solid White agar tidak tembus pandang ke hero belakang) */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden absolute top-full left-0 right-0 w-full bg-white/98 backdrop-blur-xl border-b border-slate-200 shadow-2xl p-4 sm:p-6 z-40 animate-slide-down max-h-[calc(100vh-80px)] overflow-y-auto">
+          <div className="lg:hidden absolute top-full left-0 right-0 w-full bg-white border-b border-slate-200 shadow-2xl p-4 sm:p-6 z-50 animate-slide-down max-h-[calc(100vh-64px)] overflow-y-auto">
             <div className="space-y-4">
 
               {/* Header Info Singkat di Menu Mobile */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                   Navigasi Layanan Medis
                 </span>
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#E11D48] bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#E11D48] bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200 whitespace-nowrap shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#E11D48] animate-pulse"></span>
                   Sistem AI Aktif
                 </span>
@@ -557,7 +557,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                           item.onClick?.();
                         }
                       }}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-left text-sm font-semibold transition-all ${
+                      className={`w-full min-h-[46px] flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-left text-sm font-semibold transition-all ${
                         isActive
                           ? 'bg-[#E11D48] text-white shadow-md shadow-rose-500/20'
                           : 'bg-slate-50 hover:bg-slate-100 text-slate-800'
@@ -566,17 +566,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                       <span>{item.label}</span>
                       {item.id === 'chatbot' ? (
                         <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                          className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold whitespace-nowrap ${
                             isActive ? 'bg-white text-[#E11D48]' : 'bg-rose-100 text-[#E11D48]'
                           }`}
                         >
                           AKTIF 24 JAM ✨
                         </span>
                       ) : item.id === 'beranda' ? (
-                        <span className="text-xs opacity-70">Utama</span>
+                        <span className="text-xs opacity-75 whitespace-nowrap">Utama</span>
                       ) : (
                         <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                          className={`text-[10px] px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap ${
                             isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
                           }`}
                         >
@@ -588,43 +588,62 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                 })}
               </div>
 
-              {/* Tombol Aksi Masuk & Daftar untuk Mobile */}
-              <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-3">
-                {user ? null : (
-                <button
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    setAuthMode('login');
-                    setAuthOpen(true);
-                  }}
-                  className="w-full py-2.5 rounded-xl border border-slate-300 text-slate-800 hover:bg-slate-50 font-semibold text-sm text-center transition-all active:scale-95"
-                >
-                  Masuk
-                </button>
+              {/* Tombol Aksi Masuk & Daftar / Info Akun Pasien untuk Mobile */}
+              <div className="pt-3 border-t border-slate-100">
+                {user ? (
+                  <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-slate-800 min-w-0 truncate">
+                      <UserIcon className="w-4 h-4 text-[#E11D48] shrink-0" />
+                      <span className="truncate">{profile?.username || user.email?.split('@')[0]}</span>
+                    </span>
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        signOut();
+                      }}
+                      className="px-3.5 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 font-semibold text-xs flex items-center gap-1.5 whitespace-nowrap shrink-0 active:scale-95"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Keluar</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        setAuthMode('login');
+                        setAuthOpen(true);
+                      }}
+                      className="w-full min-h-[44px] py-2.5 rounded-xl border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 font-semibold text-sm text-center transition-all active:scale-95"
+                    >
+                      Masuk
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        setAuthMode('register');
+                        setAuthOpen(true);
+                      }}
+                      className="w-full min-h-[44px] py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm text-center shadow-sm transition-all active:scale-95"
+                    >
+                      Daftar
+                    </button>
+                  </div>
                 )}
-                <button
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    setAuthMode('register');
-                     setAuthOpen(true);
-                  }}
-                  className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm text-center shadow-sm transition-all active:scale-95"
-                >
-                  Daftar
-                </button>
               </div>
 
               {/* Hotline IGD Darurat Mobile Banner */}
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-left text-xs text-slate-700 flex items-center justify-between">
-                <div>
-                  <div className="font-bold text-[#BE123C]">Hotline IGD Darurat: (021) 8065-9911</div>
-                  <div className="text-[11px] text-slate-500">Ambulans Siaga 24 Jam: 119</div>
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-left text-xs text-slate-700 flex items-center justify-between gap-2.5">
+                <div className="min-w-0">
+                  <div className="font-bold text-[#BE123C] leading-snug">Hotline IGD Darurat: (021) 8065-9911</div>
+                  <div className="text-[11px] text-slate-600 mt-0.5">Ambulans Siaga 24 Jam: 119</div>
                 </div>
                 <a
                   href="tel:02180659911"
-                  className="px-3 py-1.5 rounded-lg bg-[#E11D48] text-white font-bold text-xs shadow-sm flex items-center space-x-1"
+                  className="px-3.5 py-2 rounded-lg bg-[#E11D48] text-white font-bold text-xs shadow-sm flex items-center space-x-1.5 whitespace-nowrap shrink-0"
                 >
-                  <Phone className="w-3 h-3" />
+                  <Phone className="w-3.5 h-3.5" />
                   <span>Panggil</span>
                 </a>
               </div>
@@ -643,86 +662,86 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
       </section>
 
       {/* Pusat Eksplorasi Pasien & Fasilitas Rumah Sakit (Fitur Interaktif Nyata & Edukatif) */}
-      <section id="fitur-layanan" className="py-16 sm:py-24 max-w-[1300px] mx-auto px-4 sm:px-6 w-full">
+      <section id="fitur-layanan" className="py-12 sm:py-24 max-w-[1300px] mx-auto px-4 sm:px-6 w-full">
 
         {/* Header Bagian: Terpusat, Elegan, Interaktif */}
-        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-12 space-y-3">
-          <span className="text-xs font-bold text-[#E11D48] tracking-widest uppercase inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-rose-50 border border-rose-200">
+        <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-12 space-y-3">
+          <span className="text-[11px] sm:text-xs font-bold text-[#E11D48] tracking-widest uppercase inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-rose-50 border border-rose-200">
             <span className="w-1.5 h-1.5 rounded-full bg-[#E11D48] animate-pulse"></span>
             PUSAT INTERAKTIF PASIEN &amp; RS UMBRELLA
           </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#0F172A]">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-[#0F172A] leading-tight">
             Eksplorasi Fasilitas &amp; Simulasi Pasien
           </h2>
-          <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
+          <p className="text-[13.5px] sm:text-base text-slate-600 leading-relaxed font-normal">
             Bukan sekadar daftar informasi statis—gunakan simulator interaktif kami untuk menghitung estimasi biaya rawat inap VIP, memeriksa jadwal dokter spesialis siaga hari ini, menguji kesiapan berkas BPJS, hingga meninjau direktori denah tiap lantai gedung kami.
           </p>
         </div>
 
         {/* Tab Navigasi Interaktif (4 Tab Berbasis Warna Merah, Putih, Hitam) */}
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-10 p-1.5 bg-slate-100/90 rounded-2xl max-w-3xl mx-auto border border-slate-200 shadow-inner">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-2 sm:gap-3 mb-8 sm:mb-10 p-1.5 bg-slate-100/90 rounded-2xl max-w-3xl mx-auto border border-slate-200 shadow-inner">
           <button
             onClick={() => setHubTab('calculator')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 ${
+            className={`flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 min-h-[42px] ${
               hubTab === 'calculator'
                 ? 'bg-[#E11D48] text-white shadow-md'
                 : 'bg-transparent text-slate-700 hover:text-[#0F172A] hover:bg-white/80'
             }`}
           >
-            <Calculator className="w-4 h-4" />
-            <span>Kalkulator &amp; Kamar VIP</span>
+            <Calculator className="w-4 h-4 shrink-0" />
+            <span className="truncate">Kamar VIP</span>
           </button>
 
           <button
             onClick={() => setHubTab('schedule')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 ${
+            className={`flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 min-h-[42px] ${
               hubTab === 'schedule'
                 ? 'bg-[#E11D48] text-white shadow-md'
                 : 'bg-transparent text-slate-700 hover:text-[#0F172A] hover:bg-white/80'
             }`}
           >
-            <Calendar className="w-4 h-4" />
-            <span>Jadwal Dokter Siaga</span>
+            <Calendar className="w-4 h-4 shrink-0" />
+            <span className="truncate">Jadwal Dokter</span>
           </button>
 
           <button
             onClick={() => setHubTab('bpjs')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 ${
+            className={`flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 min-h-[42px] ${
               hubTab === 'bpjs'
                 ? 'bg-[#E11D48] text-white shadow-md'
                 : 'bg-transparent text-slate-700 hover:text-[#0F172A] hover:bg-white/80'
             }`}
           >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Simulator BPJS &amp; Asuransi</span>
+            <ShieldCheck className="w-4 h-4 shrink-0" />
+            <span className="truncate">BPJS &amp; Asuransi</span>
           </button>
 
           <button
             onClick={() => setHubTab('directory')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 ${
+            className={`flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 min-h-[42px] ${
               hubTab === 'directory'
                 ? 'bg-[#E11D48] text-white shadow-md'
                 : 'bg-transparent text-slate-700 hover:text-[#0F172A] hover:bg-white/80'
             }`}
           >
-            <Building2 className="w-4 h-4" />
-            <span>Denah Tiap Lantai RS</span>
+            <Building2 className="w-4 h-4 shrink-0" />
+            <span className="truncate">Denah Lantai</span>
           </button>
         </div>
 
         {/* Konten Tab 1: Kalkulator Biaya & Visualisasi Ranjang VIP */}
         {hubTab === 'calculator' && (
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-6 sm:p-8 lg:p-10 transition-all">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-4 sm:p-8 lg:p-10 transition-all">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12">
               
               {/* Kolom Kiri: Konfigurasi Kamar & Opsi Inap (7 Kolom) */}
-              <div className="lg:col-span-7 space-y-6">
+              <div className="lg:col-span-7 space-y-5 sm:space-y-6">
                 <div>
-                  <h3 className="text-xl sm:text-2xl font-black text-[#0F172A] tracking-tight mb-1 flex items-center gap-2.5">
-                    <Bed className="w-6 h-6 text-[#E11D48]" />
+                  <h3 className="text-lg sm:text-2xl font-black text-[#0F172A] tracking-tight mb-1.5 flex items-start sm:items-center gap-2.5 leading-snug">
+                    <Bed className="w-5 h-5 sm:w-6 sm:h-6 text-[#E11D48] shrink-0 mt-0.5 sm:mt-0" />
                     <span>Simulasi Tarif Rawat Inap &amp; Ketersediaan Ranjang</span>
                   </h3>
-                  <p className="text-xs sm:text-sm text-slate-500 font-normal">
+                  <p className="text-xs sm:text-sm text-slate-500 font-normal leading-relaxed">
                     Pilih tipe paviliun, jumlah malam rawat inap, serta fasilitas pendamping untuk mendapatkan rincian estimasi biaya transparan.
                   </p>
                 </div>
@@ -739,20 +758,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                         setCalcRoomType('aster');
                         setSelectedBedId('AST-401');
                       }}
-                      className={`p-4 rounded-2xl border text-left transition-all ${
+                      className={`p-3.5 sm:p-4 rounded-2xl border text-left transition-all ${
                         calcRoomType === 'aster'
                           ? 'border-[#E11D48] bg-rose-50/60 ring-2 ring-rose-300'
                           : 'border-slate-200 bg-white hover:border-slate-300'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="font-extrabold text-sm text-[#0F172A]">VIP Aster</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E11D48] text-white">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E11D48] text-white whitespace-nowrap shrink-0">
                           4 Bed Siap
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 mb-2">Lantai 4 Gedung Utama</p>
-                      <p className="text-xs font-black text-[#E11D48]">Rp 1.650.000 <span className="font-normal text-[10px] text-slate-500">/malam</span></p>
+                      <p className="text-xs text-slate-500 mb-2">Lantai 4 Gedung Utama</p>
+                      <p className="text-xs font-black text-[#E11D48] whitespace-nowrap">Rp 1.650.000 <span className="font-normal text-[11px] text-slate-500">/malam</span></p>
                     </button>
 
                     <button
@@ -761,20 +780,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                         setCalcRoomType('melati');
                         setSelectedBedId('MLT-405');
                       }}
-                      className={`p-4 rounded-2xl border text-left transition-all ${
+                      className={`p-3.5 sm:p-4 rounded-2xl border text-left transition-all ${
                         calcRoomType === 'melati'
                           ? 'border-[#E11D48] bg-rose-50/60 ring-2 ring-rose-300'
                           : 'border-slate-200 bg-white hover:border-slate-300'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="font-extrabold text-sm text-[#0F172A]">VIP Melati</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E11D48] text-white">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E11D48] text-white whitespace-nowrap shrink-0">
                           2 Bed Siap
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 mb-2">Lantai 4 Wing Timur</p>
-                      <p className="text-xs font-black text-[#E11D48]">Rp 1.650.000 <span className="font-normal text-[10px] text-slate-500">/malam</span></p>
+                      <p className="text-xs text-slate-500 mb-2">Lantai 4 Wing Timur</p>
+                      <p className="text-xs font-black text-[#E11D48] whitespace-nowrap">Rp 1.650.000 <span className="font-normal text-[11px] text-slate-500">/malam</span></p>
                     </button>
 
                     <button
@@ -783,41 +802,41 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                         setCalcRoomType('vvip');
                         setSelectedBedId('VVIP-501');
                       }}
-                      className={`p-4 rounded-2xl border text-left transition-all ${
+                      className={`p-3.5 sm:p-4 rounded-2xl border text-left transition-all ${
                         calcRoomType === 'vvip'
                           ? 'border-[#E11D48] bg-rose-50/60 ring-2 ring-rose-300'
                           : 'border-slate-200 bg-white hover:border-slate-300'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="font-extrabold text-sm text-[#0F172A]">VVIP Aster Suite</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#0F172A] text-white">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#0F172A] text-white whitespace-nowrap shrink-0">
                           2 Suite Siap
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 mb-2">Lantai 5 Penthouse</p>
-                      <p className="text-xs font-black text-[#E11D48]">Rp 2.850.000 <span className="font-normal text-[10px] text-slate-500">/malam</span></p>
+                      <p className="text-xs text-slate-500 mb-2">Lantai 5 Penthouse</p>
+                      <p className="text-xs font-black text-[#E11D48] whitespace-nowrap">Rp 2.850.000 <span className="font-normal text-[11px] text-slate-500">/malam</span></p>
                     </button>
                   </div>
                 </div>
 
                 {/* Durasi Menginap */}
                 <div className="space-y-2.5">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
                       Durasi Menginap Pasien:
                     </label>
-                    <span className="text-xs font-black text-[#E11D48] bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200">
+                    <span className="text-xs font-black text-[#E11D48] bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200 whitespace-nowrap shrink-0">
                       {calcNights} Malam
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="grid grid-cols-3 sm:flex sm:items-center gap-2">
                     {[1, 2, 3, 5, 7].map((n) => (
                       <button
                         key={n}
                         type="button"
                         onClick={() => setCalcNights(n)}
-                        className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+                        className={`sm:flex-1 py-2.5 px-2 rounded-xl text-xs font-bold border transition-all whitespace-nowrap min-h-[40px] ${
                           calcNights === n
                             ? 'bg-[#0F172A] text-white border-[#0F172A] shadow-sm'
                             : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -826,19 +845,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                         {n} Malam
                       </button>
                     ))}
-                    <div className="flex items-center border border-slate-200 rounded-xl bg-slate-50 overflow-hidden">
+                    <div className="flex items-center border border-slate-200 rounded-xl bg-slate-50 overflow-hidden min-h-[40px]">
                       <button
                         type="button"
                         onClick={() => setCalcNights(Math.max(1, calcNights - 1))}
-                        className="px-2.5 py-2 text-slate-700 hover:bg-slate-200 font-black text-sm"
+                        className="flex-1 px-3 py-2 text-slate-700 hover:bg-slate-200 font-black text-sm transition-colors"
                         title="Kurangi 1 Malam"
                       >
                         -
                       </button>
+                      <span className="w-px h-5 bg-slate-200" />
                       <button
                         type="button"
                         onClick={() => setCalcNights(calcNights + 1)}
-                        className="px-2.5 py-2 text-slate-700 hover:bg-slate-200 font-black text-sm"
+                        className="flex-1 px-3 py-2 text-slate-700 hover:bg-slate-200 font-black text-sm transition-colors"
                         title="Tambah 1 Malam"
                       >
                         +
@@ -852,78 +872,84 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
                     Fasilitas Pendamping Tambahan (Opsional):
                   </label>
-                  <div className="space-y-2">
-                    <label className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-slate-50/50 cursor-pointer transition-all">
-                      <div className="flex items-center gap-3">
+                  <div className="space-y-2.5">
+                    <label className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-3.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-slate-50/50 cursor-pointer transition-all">
+                      <div className="flex items-start gap-3 min-w-0">
                         <input
                           type="checkbox"
                           checked={calcExtraSofa}
                           onChange={(e) => setCalcExtraSofa(e.target.checked)}
-                          className="w-4 h-4 accent-[#E11D48] rounded cursor-pointer"
+                          className="w-4 h-4 mt-0.5 accent-[#E11D48] rounded cursor-pointer shrink-0"
                         />
-                        <div>
-                          <p className="text-xs font-bold text-[#0F172A]">Ekstra Sofa Bed &amp; Selimut Pasien</p>
-                          <p className="text-[11px] text-slate-500">Kenyamanan ekstra untuk 1 orang anggota keluarga penunggu</p>
+                        <div className="min-w-0">
+                          <p className="text-[13px] sm:text-xs font-bold text-[#0F172A] leading-snug">Ekstra Sofa Bed &amp; Selimut Pasien</p>
+                          <p className="text-xs sm:text-[11px] text-slate-500 leading-relaxed mt-0.5">Kenyamanan ekstra untuk 1 orang anggota keluarga penunggu</p>
                         </div>
                       </div>
-                      <span className="text-xs font-extrabold text-slate-700">+Rp 150.000 /mlm</span>
+                      <span className="text-xs font-extrabold text-[#E11D48] sm:text-slate-700 bg-rose-50 sm:bg-transparent px-2.5 py-1 sm:p-0 rounded-lg border border-rose-200/70 sm:border-0 self-start sm:self-auto ml-7 sm:ml-0 whitespace-nowrap shrink-0">
+                        +Rp 150.000 /mlm
+                      </span>
                     </label>
 
-                    <label className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-slate-50/50 cursor-pointer transition-all">
-                      <div className="flex items-center gap-3">
+                    <label className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-3.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-slate-50/50 cursor-pointer transition-all">
+                      <div className="flex items-start gap-3 min-w-0">
                         <input
                           type="checkbox"
                           checked={calcGourmet}
                           onChange={(e) => setCalcGourmet(e.target.checked)}
-                          className="w-4 h-4 accent-[#E11D48] rounded cursor-pointer"
+                          className="w-4 h-4 mt-0.5 accent-[#E11D48] rounded cursor-pointer shrink-0"
                         />
-                        <div>
-                          <p className="text-xs font-bold text-[#0F172A]">Paket Nutrisi Gourmet Keluarga</p>
-                          <p className="text-[11px] text-slate-500">Menu makanan lezat racikan Chef RS untuk 1 orang penunggu (3x makan)</p>
+                        <div className="min-w-0">
+                          <p className="text-[13px] sm:text-xs font-bold text-[#0F172A] leading-snug">Paket Nutrisi Gourmet Keluarga</p>
+                          <p className="text-xs sm:text-[11px] text-slate-500 leading-relaxed mt-0.5">Menu makanan lezat racikan Chef RS untuk 1 orang penunggu (3x makan)</p>
                         </div>
                       </div>
-                      <span className="text-xs font-extrabold text-slate-700">+Rp 200.000 /mlm</span>
+                      <span className="text-xs font-extrabold text-[#E11D48] sm:text-slate-700 bg-rose-50 sm:bg-transparent px-2.5 py-1 sm:p-0 rounded-lg border border-rose-200/70 sm:border-0 self-start sm:self-auto ml-7 sm:ml-0 whitespace-nowrap shrink-0">
+                        +Rp 200.000 /mlm
+                      </span>
                     </label>
 
-                    <label className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-slate-50/50 cursor-pointer transition-all">
-                      <div className="flex items-center gap-3">
+                    <label className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-3.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-slate-50/50 cursor-pointer transition-all">
+                      <div className="flex items-start gap-3 min-w-0">
                         <input
                           type="checkbox"
                           checked={calcButler}
                           onChange={(e) => setCalcButler(e.target.checked)}
-                          className="w-4 h-4 accent-[#E11D48] rounded cursor-pointer"
+                          className="w-4 h-4 mt-0.5 accent-[#E11D48] rounded cursor-pointer shrink-0"
                         />
-                        <div>
-                          <p className="text-xs font-bold text-[#0F172A]">Butler Medis Pribadi 24 Jam</p>
-                          <p className="text-[11px] text-slate-500">Pendampingan khusus pengurusan admisi, resep obat, &amp; logistik kamar</p>
+                        <div className="min-w-0">
+                          <p className="text-[13px] sm:text-xs font-bold text-[#0F172A] leading-snug">Butler Medis Pribadi 24 Jam</p>
+                          <p className="text-xs sm:text-[11px] text-slate-500 leading-relaxed mt-0.5">Pendampingan khusus pengurusan admisi, resep obat, &amp; logistik kamar</p>
                         </div>
                       </div>
-                      <span className="text-xs font-extrabold text-slate-700">+Rp 300.000 /mlm</span>
+                      <span className="text-xs font-extrabold text-[#E11D48] sm:text-slate-700 bg-rose-50 sm:bg-transparent px-2.5 py-1 sm:p-0 rounded-lg border border-rose-200/70 sm:border-0 self-start sm:self-auto ml-7 sm:ml-0 whitespace-nowrap shrink-0">
+                        +Rp 300.000 /mlm
+                      </span>
                     </label>
                   </div>
                 </div>
 
                 {/* Fasilitas Kamar Default */}
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
-                  <p className="font-bold text-slate-800 flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-[#E11D48]" />
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2.5">
+                  <p className="font-bold text-slate-800 flex items-start sm:items-center gap-2 leading-snug">
+                    <CheckCircle2 className="w-4 h-4 text-[#E11D48] shrink-0 mt-0.5 sm:mt-0" />
                     <span>Fasilitas Standar Sudah Termasuk di Setiap Kamar:</span>
                   </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11.5px] text-slate-600">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#E11D48]"></span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600">
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#E11D48] shrink-0"></span>
                       <span>Ranjang Elektrik Hill-Rom Remote</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#E11D48]"></span>
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#E11D48] shrink-0"></span>
                       <span>Kamar Mandi Dalam Water Heater</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#E11D48]"></span>
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#E11D48] shrink-0"></span>
                       <span>Smart TV LED + WiFi RS Cepat</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#E11D48]"></span>
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#E11D48] shrink-0"></span>
                       <span>Air Purifier Medis HEPA H13</span>
                     </div>
                   </div>
@@ -932,21 +958,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
               </div>
 
               {/* Kolom Kanan: Visual Denah Ranjang & Kalkulasi Biaya (5 Kolom) */}
-              <div className="lg:col-span-5 flex flex-col justify-between space-y-6 bg-slate-50/70 p-6 rounded-3xl border border-slate-200">
+              <div className="lg:col-span-5 flex flex-col justify-between space-y-5 sm:space-y-6 bg-slate-50/70 p-4 sm:p-6 rounded-3xl border border-slate-200">
                 
                 {/* Visualisasi Ranjang Kamar yang Siap Huni */}
                 <div>
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 mb-2.5">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
                       Visualisasi Ranjang Siap Huni:
                     </h4>
-                    <span className="text-[11px] font-bold text-[#E11D48] flex items-center gap-1">
+                    <span className="text-[11px] font-bold text-[#E11D48] inline-flex items-center gap-1.5 whitespace-nowrap shrink-0">
                       <span className="w-2 h-2 rounded-full bg-[#E11D48] animate-ping"></span>
                       Status Live SIMRS
                     </span>
                   </div>
 
-                  <p className="text-[11.5px] text-slate-500 mb-3">
+                  <p className="text-xs text-slate-500 leading-relaxed mb-3">
                     Klik salah satu ranjang untuk memilih posisi ruangan pasien:
                   </p>
 
@@ -967,11 +993,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                             : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
                         }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-extrabold">{b.label}</span>
-                          <Bed className="w-3.5 h-3.5 opacity-80" />
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-extrabold truncate">{b.label}</span>
+                          <Bed className="w-3.5 h-3.5 opacity-80 shrink-0" />
                         </div>
-                        <span className={`text-[10px] block mt-1 ${selectedBedId === b.id ? 'text-white/90' : 'text-slate-400'}`}>
+                        <span className={`text-[10.5px] block mt-1 truncate ${selectedBedId === b.id ? 'text-white/90' : 'text-slate-400'}`}>
                           {b.view} • Steril
                         </span>
                       </button>
@@ -991,11 +1017,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                             : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
                         }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-extrabold">{b.label}</span>
-                          <Bed className="w-3.5 h-3.5 opacity-80" />
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-extrabold truncate">{b.label}</span>
+                          <Bed className="w-3.5 h-3.5 opacity-80 shrink-0" />
                         </div>
-                        <span className={`text-[10px] block mt-1 ${selectedBedId === b.id ? 'text-white/90' : 'text-slate-400'}`}>
+                        <span className={`text-[10.5px] block mt-1 truncate ${selectedBedId === b.id ? 'text-white/90' : 'text-slate-400'}`}>
                           {b.view} • Steril
                         </span>
                       </button>
@@ -1015,20 +1041,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                             : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
                         }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-extrabold">{b.label}</span>
-                          <Bed className="w-3.5 h-3.5 opacity-80" />
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-extrabold truncate">{b.label}</span>
+                          <Bed className="w-3.5 h-3.5 opacity-80 shrink-0" />
                         </div>
-                        <span className={`text-[10px] block mt-1 ${selectedBedId === b.id ? 'text-white/90' : 'text-slate-400'}`}>
+                        <span className={`text-[10.5px] block mt-1 truncate ${selectedBedId === b.id ? 'text-white/90' : 'text-slate-400'}`}>
                           {b.view} • Steril
                         </span>
                       </button>
                     ))}
                   </div>
 
-                  <div className="p-3 rounded-xl bg-white border border-slate-200 text-[11px] text-slate-600 flex items-center justify-between">
-                    <span>Ranjang Dipilih: <strong className="text-[#0F172A]">{selectedBedId}</strong></span>
-                    <span className="text-[#E11D48] font-bold">Siap Huni Segera</span>
+                  <div className="p-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-600 flex items-center justify-between gap-2">
+                    <span className="truncate">Ranjang: <strong className="text-[#0F172A]">{selectedBedId}</strong></span>
+                    <span className="text-[#E11D48] font-bold whitespace-nowrap shrink-0">Siap Huni</span>
                   </div>
                 </div>
 
@@ -1038,10 +1064,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                     Rincian Perhitungan Biaya:
                   </h4>
 
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex justify-between text-slate-600">
-                      <span>Tarif Kamar ({calcNights} malam x {calcRoomType === 'vvip' ? 'Rp 2.850.000' : 'Rp 1.650.000'}):</span>
-                      <span className="font-bold text-slate-800">
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between items-start gap-2 text-slate-600">
+                      <span className="leading-snug">Tarif Kamar ({calcNights} mlm x {calcRoomType === 'vvip' ? 'Rp 2.850.000' : 'Rp 1.650.000'}):</span>
+                      <span className="font-bold text-slate-800 whitespace-nowrap shrink-0">
                         {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(
                           (calcRoomType === 'vvip' ? 2850000 : 1650000) * calcNights
                         )}
@@ -1049,9 +1075,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                     </div>
 
                     {((calcExtraSofa ? 150000 : 0) + (calcGourmet ? 200000 : 0) + (calcButler ? 300000 : 0)) > 0 && (
-                      <div className="flex justify-between text-slate-600">
-                        <span>Layanan Tambahan Terpilih ({calcNights} malam):</span>
-                        <span className="font-bold text-slate-800">
+                      <div className="flex justify-between items-start gap-2 text-slate-600">
+                        <span className="leading-snug">Layanan Tambahan ({calcNights} malam):</span>
+                        <span className="font-bold text-slate-800 whitespace-nowrap shrink-0">
                           {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(
                             ((calcExtraSofa ? 150000 : 0) + (calcGourmet ? 200000 : 0) + (calcButler ? 300000 : 0)) * calcNights
                           )}
@@ -1059,17 +1085,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                       </div>
                     )}
 
-                    <div className="flex justify-between text-slate-600">
+                    <div className="flex justify-between items-center gap-2 text-slate-600">
                       <span>Biaya Registrasi &amp; SIMRS:</span>
-                      <span className="font-bold text-[#E11D48]">GRATIS (Rp 0)</span>
+                      <span className="font-bold text-[#E11D48] whitespace-nowrap shrink-0">GRATIS (Rp 0)</span>
                     </div>
                   </div>
 
                   {/* Total Estimasi */}
-                  <div className="p-4 rounded-2xl bg-white border-2 border-rose-200 shadow-sm flex items-center justify-between">
-                    <div>
+                  <div className="p-4 rounded-2xl bg-white border-2 border-rose-200 shadow-sm flex items-center justify-between gap-2">
+                    <div className="min-w-0">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Estimasi Biaya:</p>
-                      <p className="text-xl sm:text-2xl font-black text-[#E11D48]">
+                      <p className="text-lg sm:text-2xl font-black text-[#E11D48] whitespace-nowrap">
                         {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(
                           ((calcRoomType === 'vvip' ? 2850000 : 1650000) +
                             (calcExtraSofa ? 150000 : 0) +
@@ -1079,14 +1105,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                         )}
                       </p>
                     </div>
-                    <div className="text-right text-[10px] text-slate-400">
-                      <span>Estimasi transparan</span>
-                      <p className="text-slate-500 font-semibold">{calcNights} Malam Inap</p>
+                    <div className="text-right text-[11px] text-slate-400 whitespace-nowrap shrink-0">
+                      <span>Estimasi</span>
+                      <p className="text-slate-600 font-semibold">{calcNights} Malam</p>
                     </div>
                   </div>
 
                   {/* Tombol Aksi Menghubungkan ke Chatbot AI */}
-                  <div className="space-y-2 pt-2">
+                  <div className="space-y-2.5 pt-2">
                     <button
                       type="button"
                       onClick={() =>
@@ -1096,26 +1122,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                           } ranjang ${selectedBedId} untuk estimasi ${calcNights} malam inap.`
                         )
                       }
-                      className="w-full py-3 px-4 rounded-xl bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
+                      className="w-full min-h-[44px] py-3 px-3 sm:px-4 rounded-xl bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-[11px] sm:text-xs uppercase tracking-wide sm:tracking-wider flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm transition-all active:scale-95 whitespace-nowrap"
                     >
-                      <span>Tanya &amp; Reservasi Kamar ke Asisten AI</span>
-                      <ArrowRight className="w-4 h-4" />
+                      <span>Tanya &amp; Reservasi ke Asisten AI</span>
+                      <ArrowRight className="w-4 h-4 shrink-0" />
                     </button>
 
                     <a
                       href="tel:+622180659911"
-                      className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs border border-slate-200 flex items-center justify-center gap-2 transition-all"
+                      className="w-full min-h-[42px] py-2.5 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs border border-slate-200 flex items-center justify-center gap-2 transition-all"
                     >
-                      <PhoneCall className="w-3.5 h-3.5 text-[#E11D48]" />
-                      <span>Telepon Admisi Rawat Inap (021) 8065-9911</span>
+                      <PhoneCall className="w-3.5 h-3.5 text-[#E11D48] shrink-0" />
+                      <span>Admisi Rawat Inap (021) 8065-9911</span>
                     </a>
 
                     <button
                       type="button"
                       onClick={() => setIsRoomBookingOpen(true)}
-                      className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs border border-emerald-700 flex items-center justify-center gap-2 transition-all"
+                      className="w-full min-h-[42px] py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs border border-emerald-700 flex items-center justify-center gap-2 transition-all"
                     >
-                      <BedDouble className="w-3.5 h-3.5" />
+                      <BedDouble className="w-3.5 h-3.5 shrink-0" />
                       <span>Reservasi Kamar (Catat ke Database)</span>
                     </button>
                   </div>
@@ -1130,28 +1156,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
 
         {/* Konten Tab 2: Cek Jadwal Dokter Spesialis Siaga Harian */}
         {hubTab === 'schedule' && (
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-6 sm:p-8 lg:p-10 transition-all space-y-6">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-4 sm:p-8 lg:p-10 transition-all space-y-5 sm:space-y-6">
             
             {/* Filter Hari Praktik (Senin - Sabtu) */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
               <div>
-                <h3 className="text-xl sm:text-2xl font-black text-[#0F172A] tracking-tight flex items-center gap-2">
-                  <Stethoscope className="w-6 h-6 text-[#E11D48]" />
+                <h3 className="text-lg sm:text-2xl font-black text-[#0F172A] tracking-tight mb-1 flex items-start sm:items-center gap-2 leading-snug">
+                  <Stethoscope className="w-5 h-5 sm:w-6 sm:h-6 text-[#E11D48] shrink-0 mt-0.5 sm:mt-0" />
                   <span>Jadwal Dokter Spesialis Siaga Harian</span>
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-500 font-normal">
+                <p className="text-xs sm:text-sm text-slate-500 font-normal leading-relaxed">
                   Pilih hari untuk melihat daftar dokter spesialis yang sedang siaga, jam praktik, dan sisa kuota antrean hari ini.
                 </p>
               </div>
 
               {/* Hari Praktik Selector */}
-              <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200">
+              <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-1.5 p-1.5 bg-slate-100 rounded-2xl border border-slate-200 shrink-0">
                 {['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'].map((day) => (
                   <button
                     key={day}
                     type="button"
                     onClick={() => setScheduleDay(day)}
-                    className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
+                    className={`px-3 py-2 sm:py-1.5 rounded-xl font-bold text-xs transition-all whitespace-nowrap ${
                       scheduleDay === day
                         ? 'bg-[#E11D48] text-white shadow-sm'
                         : 'bg-transparent text-slate-700 hover:text-[#0F172A] hover:bg-white'
@@ -1164,14 +1190,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
             </div>
 
             {/* Filter Spesialisasi */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-              <span className="text-xs font-bold text-slate-500 whitespace-nowrap mr-1">Filter Poli:</span>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+              <span className="text-xs font-bold text-slate-500 whitespace-nowrap mr-1 shrink-0">Filter Poli:</span>
               {['Semua', 'Penyakit Dalam', 'Anak', 'Jantung', 'Kandungan', 'Bedah', 'Saraf', 'Kulit'].map((spec) => (
                 <button
                   key={spec}
                   type="button"
                   onClick={() => setScheduleSpecialty(spec)}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap border transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 border transition-all ${
                     scheduleSpecialty === spec
                       ? 'bg-[#0F172A] text-white border-[#0F172A]'
                       : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
@@ -1183,7 +1209,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
             </div>
 
             {/* Grid Kartu Dokter yang Siaga pada Hari Tersebut */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
               {INITIAL_DOCTORS.filter((doc) => {
                 const matchDay = doc.days.includes(scheduleDay);
                 if (!matchDay) return false;
@@ -1192,7 +1218,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
               }).map((doc) => (
                 <div
                   key={doc.id}
-                  className="p-5 rounded-2xl border border-slate-200 hover:border-[#E11D48] hover:shadow-lg transition-all duration-300 flex flex-col justify-between bg-white group"
+                  className="p-4 sm:p-5 rounded-2xl border border-slate-200 hover:border-[#E11D48] hover:shadow-lg transition-all duration-300 flex flex-col justify-between bg-white group"
                 >
                   <div>
                     {/* Header: Avatar, Status, Kuota */}
@@ -1204,17 +1230,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1 mb-1">
-                          <span className="text-[10px] font-bold text-[#E11D48] bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200 truncate">
+                          <span className="text-[10.5px] font-bold text-[#E11D48] bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200 truncate">
                             {doc.specialty}
                           </span>
-                          <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap">
+                          <span className="text-[10.5px] font-bold text-slate-500 whitespace-nowrap shrink-0">
                             ★ {doc.rating}
                           </span>
                         </div>
                         <h4 className="font-extrabold text-sm text-[#0F172A] leading-snug truncate group-hover:text-[#E11D48] transition-colors">
                           {doc.name}
                         </h4>
-                        <p className="text-[10.5px] text-slate-500 truncate mt-0.5">
+                        <p className="text-[11px] text-slate-500 truncate mt-0.5">
                           {doc.subSpecialty || doc.title}
                         </p>
                       </div>
@@ -1222,34 +1248,34 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
 
                     {/* Rincian Jam Praktik & Ruangan */}
                     <div className="space-y-1.5 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-700 mb-3">
-                      <div className="flex items-center justify-between text-[11.5px]">
-                        <span className="text-slate-500 flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-[#E11D48]" />
+                      <div className="flex items-center justify-between gap-2 text-xs">
+                        <span className="text-slate-500 flex items-center gap-1.5 whitespace-nowrap">
+                          <Clock className="w-3.5 h-3.5 text-[#E11D48] shrink-0" />
                           Jam Praktik:
                         </span>
-                        <strong className="text-slate-900">{doc.hours}</strong>
+                        <strong className="text-slate-900 whitespace-nowrap">{doc.hours}</strong>
                       </div>
-                      <div className="flex items-center justify-between text-[11.5px]">
-                        <span className="text-slate-500 flex items-center gap-1.5">
-                          <MapPin className="w-3.5 h-3.5 text-[#E11D48]" />
+                      <div className="flex items-center justify-between gap-2 text-xs">
+                        <span className="text-slate-500 flex items-center gap-1.5 whitespace-nowrap">
+                          <MapPin className="w-3.5 h-3.5 text-[#E11D48] shrink-0" />
                           Ruang Poli:
                         </span>
-                        <strong className="text-slate-900">{doc.room}</strong>
+                        <strong className="text-slate-900 text-right truncate">{doc.room}</strong>
                       </div>
-                      <div className="flex items-center justify-between text-[11.5px] pt-1 border-t border-slate-200/60">
-                        <span className="text-slate-500">Sisa Kuota Antrean:</span>
-                        <span className="font-black text-[#E11D48]">
+                      <div className="flex items-center justify-between gap-2 text-xs pt-1 border-t border-slate-200/60">
+                        <span className="text-slate-500 whitespace-nowrap">Sisa Kuota:</span>
+                        <span className="font-black text-[#E11D48] whitespace-nowrap">
                           {doc.quotaAvailable} dari {doc.quotaTotal} Antrean
                         </span>
                       </div>
                     </div>
 
                     {/* Tag Jaminan */}
-                    <div className="flex items-center gap-1.5 mb-4">
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                    <div className="flex flex-wrap items-center gap-1.5 mb-4">
+                      <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 whitespace-nowrap">
                         BPJS Kesehatan
                       </span>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                      <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 whitespace-nowrap">
                         Asuransi Cashless
                       </span>
                     </div>
@@ -1263,10 +1289,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                         `Halo, saya ingin reservasi nomor antrean dokter ${doc.name} (${doc.specialty}) untuk jadwal hari ${scheduleDay} di ${doc.room}.`
                       )
                     }
-                    className="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-[#E11D48] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95"
+                    className="w-full min-h-[42px] py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-[#E11D48] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95"
                   >
                     <span>Daftar Janji Temu via AI</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-3.5 h-3.5 shrink-0" />
                   </button>
                 </div>
               ))}
@@ -1279,7 +1305,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
               if (scheduleSpecialty === 'Semua') return true;
               return doc.specialty.toLowerCase().includes(scheduleSpecialty.toLowerCase());
             }).length === 0 && (
-              <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+              <div className="text-center py-10 px-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
                 <AlertCircle className="w-8 h-8 text-[#E11D48] mx-auto" />
                 <p className="font-bold text-sm text-slate-800">
                   Tidak ada dokter poli {scheduleSpecialty} yang berjadwal pada hari {scheduleDay}.
@@ -1290,7 +1316,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                 <button
                   type="button"
                   onClick={() => setScheduleSpecialty('Semua')}
-                  className="px-4 py-2 rounded-xl bg-[#E11D48] text-white font-bold text-xs"
+                  className="px-4 py-2.5 rounded-xl bg-[#E11D48] text-white font-bold text-xs"
                 >
                   Tampilkan Semua Dokter Hari {scheduleDay}
                 </button>
@@ -1302,50 +1328,50 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
 
         {/* Konten Tab 3: Simulator Syarat Berkas BPJS & Cek Rekanan Asuransi */}
         {hubTab === 'bpjs' && (
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-6 sm:p-8 lg:p-10 transition-all space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-4 sm:p-8 lg:p-10 transition-all space-y-6 sm:space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10">
               
               {/* Kolom Kiri: Simulator Syarat Berkas BPJS (6 Kolom) */}
               <div className="lg:col-span-6 space-y-5">
                 <div>
-                  <h3 className="text-xl sm:text-2xl font-black text-[#0F172A] tracking-tight mb-1 flex items-center gap-2.5">
-                    <ShieldCheck className="w-6 h-6 text-[#E11D48]" />
+                  <h3 className="text-lg sm:text-2xl font-black text-[#0F172A] tracking-tight mb-1.5 flex items-start sm:items-center gap-2.5 leading-snug">
+                    <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 text-[#E11D48] shrink-0 mt-0.5 sm:mt-0" />
                     <span>Simulator Kesiapan Berkas BPJS Kesehatan</span>
                   </h3>
-                  <p className="text-xs sm:text-sm text-slate-500 font-normal">
+                  <p className="text-xs sm:text-sm text-slate-500 font-normal leading-relaxed">
                     Ketahui apakah Anda memerlukan surat rujukan Faskes 1 atau dapat langsung ditangani di IGD secara bebas rujukan.
                   </p>
                 </div>
 
                 {/* Toggle Kasus: Gawat Darurat vs Rawat Jalan */}
-                <div className="p-1.5 bg-slate-100 rounded-2xl border border-slate-200 flex">
+                <div className="p-1.5 bg-slate-100 rounded-2xl border border-slate-200 grid grid-cols-2 gap-1.5">
                   <button
                     type="button"
                     onClick={() => setBpjsEmergency(false)}
-                    className={`flex-1 py-2 rounded-xl font-bold text-xs transition-all ${
+                    className={`py-2.5 px-2 rounded-xl font-bold text-xs transition-all leading-snug ${
                       !bpjsEmergency
                         ? 'bg-white text-[#0F172A] shadow-sm'
                         : 'text-slate-600 hover:text-[#0F172A]'
                     }`}
                   >
-                    Rawat Jalan / Poliklinik
+                    Rawat Jalan / Poli
                   </button>
                   <button
                     type="button"
                     onClick={() => setBpjsEmergency(true)}
-                    className={`flex-1 py-2 rounded-xl font-bold text-xs transition-all ${
+                    className={`py-2.5 px-2 rounded-xl font-bold text-xs transition-all leading-snug ${
                       bpjsEmergency
                         ? 'bg-[#E11D48] text-white shadow-sm'
                         : 'text-slate-600 hover:text-[#0F172A]'
                     }`}
                   >
-                    Kondisi Gawat Darurat (IGD)
+                    Gawat Darurat (IGD)
                   </button>
                 </div>
 
                 {/* Kondisi 1: Gawat Darurat (100% Bebas Rujukan) */}
                 {bpjsEmergency ? (
-                  <div className="p-5 rounded-2xl bg-rose-50 border-2 border-rose-300 space-y-3">
+                  <div className="p-4 sm:p-5 rounded-2xl bg-rose-50 border-2 border-rose-300 space-y-3">
                     <div className="flex items-center gap-2 text-[#BE123C] font-black text-sm uppercase tracking-wide">
                       <AlertTriangle className="w-5 h-5 flex-shrink-0" />
                       <span>100% Bebas Rujukan Faskes 1!</span>
@@ -1353,16 +1379,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                     <p className="text-xs text-slate-700 leading-relaxed">
                       Sesuai <strong>Permenkes RI No. 47/2018 &amp; Regulasi BPJS Kesehatan</strong>, pasien dalam kondisi gawat darurat (sesak napas akut, henti jantung, penurunan kesadaran, trauma perdarahan hebat, demam tinggi kejang pada anak) <strong>TIDAK MEMERLUKAN SURAT RUJUKAN</strong> dari Puskesmas/Klinik.
                     </p>
-                    <div className="p-3 bg-white rounded-xl border border-rose-200 text-xs text-slate-800 space-y-1">
+                    <div className="p-3.5 bg-white rounded-xl border border-rose-200 text-xs text-slate-800 space-y-1">
                       <p className="font-bold text-[#0F172A]">Dokumen yang Dibutuhkan di IGD:</p>
-                      <p className="text-slate-600 text-[11.5px]">• Cukup bawa KTP Asli / KIS Digital di aplikasi Mobile JKN (Penanganan medis selalu didahulukan daripada administrasi).</p>
+                      <p className="text-slate-600 text-xs leading-relaxed">• Cukup bawa KTP Asli / KIS Digital di aplikasi Mobile JKN (Penanganan medis selalu didahulukan daripada administrasi).</p>
                     </div>
                     <div className="pt-1 flex gap-2">
                       <a
                         href="tel:+622180659911"
-                        className="flex-1 py-2.5 rounded-xl bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+                        className="flex-1 min-h-[42px] py-2.5 px-3 rounded-xl bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
                       >
-                        <PhoneCall className="w-3.5 h-3.5" />
+                        <PhoneCall className="w-3.5 h-3.5 shrink-0" />
                         <span>Hotline IGD: (021) 8065-9911</span>
                       </a>
                     </div>
@@ -1375,49 +1401,49 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                     </p>
 
                     <div className="space-y-2.5">
-                      <label className="flex items-center gap-3 p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition-all">
+                      <label className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition-all">
                         <input
                           type="checkbox"
                           checked={bpjsChecklist.rujukan}
                           onChange={(e) => setBpjsChecklist({ ...bpjsChecklist, rujukan: e.target.checked })}
-                          className="w-4 h-4 accent-[#E11D48] rounded cursor-pointer"
+                          className="w-4 h-4 mt-0.5 accent-[#E11D48] rounded cursor-pointer shrink-0"
                         />
-                        <div className="text-xs">
-                          <p className="font-bold text-[#0F172A]">Surat Rujukan Online Faskes 1 Aktif</p>
-                          <p className="text-[11px] text-slate-500">Dari Puskesmas / Klinik Pratama (Masa berlaku 90 hari di PCare)</p>
+                        <div className="min-w-0">
+                          <p className="text-[13px] sm:text-xs font-bold text-[#0F172A] leading-snug">Surat Rujukan Online Faskes 1 Aktif</p>
+                          <p className="text-xs sm:text-[11px] text-slate-500 leading-relaxed mt-0.5">Dari Puskesmas / Klinik Pratama (Masa berlaku 90 hari di PCare)</p>
                         </div>
                       </label>
 
-                      <label className="flex items-center gap-3 p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition-all">
+                      <label className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition-all">
                         <input
                           type="checkbox"
                           checked={bpjsChecklist.ktp}
                           onChange={(e) => setBpjsChecklist({ ...bpjsChecklist, ktp: e.target.checked })}
-                          className="w-4 h-4 accent-[#E11D48] rounded cursor-pointer"
+                          className="w-4 h-4 mt-0.5 accent-[#E11D48] rounded cursor-pointer shrink-0"
                         />
-                        <div className="text-xs">
-                          <p className="font-bold text-[#0F172A]">e-KTP Asli / Kartu KIS Digital</p>
-                          <p className="text-[11px] text-slate-500">Status kepesertaan aktif di Mobile JKN (atau kartu fisik KIS)</p>
+                        <div className="min-w-0">
+                          <p className="text-[13px] sm:text-xs font-bold text-[#0F172A] leading-snug">e-KTP Asli / Kartu KIS Digital</p>
+                          <p className="text-xs sm:text-[11px] text-slate-500 leading-relaxed mt-0.5">Status kepesertaan aktif di Mobile JKN (atau kartu fisik KIS)</p>
                         </div>
                       </label>
 
-                      <label className="flex items-center gap-3 p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition-all">
+                      <label className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition-all">
                         <input
                           type="checkbox"
                           checked={bpjsChecklist.antrean}
                           onChange={(e) => setBpjsChecklist({ ...bpjsChecklist, antrean: e.target.checked })}
-                          className="w-4 h-4 accent-[#E11D48] rounded cursor-pointer"
+                          className="w-4 h-4 mt-0.5 accent-[#E11D48] rounded cursor-pointer shrink-0"
                         />
-                        <div className="text-xs">
-                          <p className="font-bold text-[#0F172A]">Surat Kontrol Ulang Dokter DPJP (Jika Kontrol Lanjutan)</p>
-                          <p className="text-[11px] text-slate-500">Wajib dilampirkan jika kunjungan kedua atau perawatan pasca rawat inap</p>
+                        <div className="min-w-0">
+                          <p className="text-[13px] sm:text-xs font-bold text-[#0F172A] leading-snug">Surat Kontrol Ulang Dokter DPJP (Jika Kontrol Lanjutan)</p>
+                          <p className="text-xs sm:text-[11px] text-slate-500 leading-relaxed mt-0.5">Wajib dilampirkan jika kunjungan kedua atau perawatan pasca rawat inap</p>
                         </div>
                       </label>
                     </div>
 
-                    <div className="p-3.5 rounded-2xl bg-white border border-slate-200 text-xs flex items-center justify-between">
+                    <div className="p-3.5 rounded-2xl bg-white border border-slate-200 text-xs flex items-center justify-between gap-2">
                       <span className="text-slate-600">Kesiapan Berkas Anda:</span>
-                      <span className="font-bold text-[#E11D48]">
+                      <span className="font-bold text-[#E11D48] whitespace-nowrap shrink-0">
                         {(bpjsChecklist.rujukan ? 1 : 0) + (bpjsChecklist.ktp ? 1 : 0) + (bpjsChecklist.antrean ? 1 : 0)} dari 3 Siap
                       </span>
                     </div>
@@ -1429,23 +1455,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                           'Bagaimana alur dan syarat rujukan BPJS Kesehatan untuk berobat ke poliklinik spesialis RS Umbrella?'
                         )
                       }
-                      className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-[#E11D48] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95"
+                      className="w-full min-h-[42px] py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-[#E11D48] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95"
                     >
                       <span>Panduan Lengkap Alur BPJS via AI</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <ArrowRight className="w-3.5 h-3.5 shrink-0" />
                     </button>
                   </div>
                 )}
               </div>
 
               {/* Kolom Kanan: Cek Rekanan Asuransi Cashless 25+ (6 Kolom) */}
-              <div className="lg:col-span-6 space-y-5 bg-slate-50/70 p-6 rounded-3xl border border-slate-200">
+              <div className="lg:col-span-6 space-y-5 bg-slate-50/70 p-4 sm:p-6 rounded-3xl border border-slate-200">
                 <div>
-                  <h3 className="text-xl sm:text-2xl font-black text-[#0F172A] tracking-tight mb-1 flex items-center gap-2.5">
-                    <CreditCard className="w-6 h-6 text-[#E11D48]" />
+                  <h3 className="text-lg sm:text-2xl font-black text-[#0F172A] tracking-tight mb-1.5 flex items-start sm:items-center gap-2.5 leading-snug">
+                    <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-[#E11D48] shrink-0 mt-0.5 sm:mt-0" />
                     <span>Cek Rekanan Asuransi Cashless (25+ Mitra)</span>
                   </h3>
-                  <p className="text-xs sm:text-sm text-slate-500 font-normal">
+                  <p className="text-xs sm:text-sm text-slate-500 font-normal leading-relaxed">
                     Ketik nama asuransi Anda untuk memastikan jaminan penjaminan non-tunai (cashless guarantee) di RS Umbrella Care.
                   </p>
                 </div>
@@ -1457,8 +1483,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                     type="text"
                     value={insuranceSearch}
                     onChange={(e) => setInsuranceSearch(e.target.value)}
-                    placeholder="Ketik nama asuransi Anda (misal: Prudential, Allianz, Inhealth)..."
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#E11D48] transition-all"
+                    placeholder="Ketik nama asuransi Anda (misal: Prudential, Allianz)..."
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm sm:text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#E11D48] transition-all"
                   />
                 </div>
 
@@ -1473,7 +1499,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                         key={ins.name}
                         type="button"
                         onClick={() => setSelectedInsuranceName(ins.name)}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all ${
+                        className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all whitespace-nowrap ${
                           selectedInsuranceName === ins.name
                             ? 'bg-[#E11D48] text-white border-[#E11D48] shadow-sm'
                             : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
@@ -1490,29 +1516,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                     INSURANCE_PARTNERS.find((i) => i.name === selectedInsuranceName) ||
                     INSURANCE_PARTNERS[2];
                   return (
-                    <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10.5px] font-bold px-2.5 py-0.5 rounded-full bg-rose-50 text-[#E11D48] border border-rose-200">
+                    <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-[10.5px] font-bold px-2.5 py-0.5 rounded-full bg-rose-50 text-[#E11D48] border border-rose-200 whitespace-nowrap">
                           {ins.category}
                         </span>
-                        <span className="text-[11px] font-bold text-slate-700">
+                        <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap">
                           Hotline: {ins.hotline}
                         </span>
                       </div>
 
-                      <h4 className="font-black text-base text-[#0F172A]">{ins.name}</h4>
+                      <h4 className="font-black text-base text-[#0F172A] leading-snug">{ins.name}</h4>
 
-                      <div className="space-y-1.5 text-xs text-slate-600">
-                        <div className="flex items-center gap-2">
-                          <Check className="w-3.5 h-3.5 text-[#E11D48]" />
+                      <div className="space-y-1.5 text-xs text-slate-600 leading-relaxed">
+                        <div className="flex items-start gap-2">
+                          <Check className="w-3.5 h-3.5 text-[#E11D48] shrink-0 mt-0.5" />
                           <span>Metode Penjaminan: <strong>{ins.coverageMethod} (Non-Tunai Instan)</strong></span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Check className="w-3.5 h-3.5 text-[#E11D48]" />
+                        <div className="flex items-start gap-2">
+                          <Check className="w-3.5 h-3.5 text-[#E11D48] shrink-0 mt-0.5" />
                           <span>Meja Admisi Prioritas di Lobby Lantai 1</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Check className="w-3.5 h-3.5 text-[#E11D48]" />
+                        <div className="flex items-start gap-2">
+                          <Check className="w-3.5 h-3.5 text-[#E11D48] shrink-0 mt-0.5" />
                           <span>Berlaku untuk Rawat Inap &amp; Rawat Jalan Poliklinik</span>
                         </div>
                       </div>
@@ -1524,10 +1550,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                             `Bagaimana alur klaim penjaminan non-tunai (cashless) untuk asuransi ${ins.name} di RS Umbrella?`
                           )
                         }
-                        className="w-full mt-2 py-2 px-3 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-[#E11D48] text-slate-800 font-bold text-xs border border-slate-200 flex items-center justify-center gap-2 transition-all"
+                        className="w-full min-h-[42px] mt-2 py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-[#E11D48] text-slate-800 font-bold text-xs border border-slate-200 flex items-center justify-center gap-2 transition-all"
                       >
-                        <span>Tanya Syarat Polis {ins.logoText || ins.name} ke AI</span>
-                        <ArrowUpRight className="w-3.5 h-3.5" />
+                        <span className="truncate">Tanya Syarat Polis {ins.logoText || ins.name} ke AI</span>
+                        <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
                       </button>
                     </div>
                   );
@@ -1541,13 +1567,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
 
         {/* Konten Tab 4: Peta & Direktori Fasilitas Lantai Gedung RS */}
         {hubTab === 'directory' && (
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-6 sm:p-8 lg:p-10 transition-all space-y-6">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-4 sm:p-8 lg:p-10 transition-all space-y-5 sm:space-y-6">
             <div>
-              <h3 className="text-xl sm:text-2xl font-black text-[#0F172A] tracking-tight mb-1 flex items-center gap-2.5">
-                <Building2 className="w-6 h-6 text-[#E11D48]" />
+              <h3 className="text-lg sm:text-2xl font-black text-[#0F172A] tracking-tight mb-1.5 flex items-start sm:items-center gap-2.5 leading-snug">
+                <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-[#E11D48] shrink-0 mt-0.5 sm:mt-0" />
                 <span>Direktori Denah Fasilitas Tiap Lantai RS Umbrella</span>
               </h3>
-              <p className="text-xs sm:text-sm text-slate-500 font-normal">
+              <p className="text-xs sm:text-sm text-slate-500 font-normal leading-relaxed">
                 Pilih lantai gedung untuk melihat daftar ruangan medis, fasilitas penunjang, jam operasional, serta nomor ekstensi telepon langsung.
               </p>
             </div>
@@ -1724,25 +1750,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
               const currentFloor = floorData.find((f) => f.floor === selectedFloor) || floorData[0];
 
               return (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
                   {currentFloor.items.map((item) => (
                     <div
                       key={item.key}
-                      className={`p-5 rounded-2xl border transition-all ${
+                      className={`p-4 sm:p-5 rounded-2xl border transition-all ${
                         selectedFacilityKey === item.key
                           ? 'border-[#E11D48] bg-rose-50/40 ring-2 ring-rose-200'
                           : 'border-slate-200 bg-white hover:border-slate-300'
                       }`}
                       onClick={() => setSelectedFacilityKey(item.key)}
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <span className="text-[10.5px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 whitespace-nowrap">
                           {item.hours}
                         </span>
                         <span className="text-xs font-bold text-[#E11D48]">{item.ext}</span>
                       </div>
-                      <h4 className="font-extrabold text-sm text-[#0F172A] mb-1.5">{item.name}</h4>
-                      <p className="text-xs text-slate-600 leading-relaxed mb-4">{item.desc}</p>
+                      <h4 className="font-extrabold text-sm text-[#0F172A] mb-1.5 leading-snug">{item.name}</h4>
+                      <p className="text-xs text-slate-600 leading-relaxed mb-3.5">{item.desc}</p>
                       <button
                         type="button"
                         onClick={(e) => {
@@ -1751,10 +1777,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                             `Saya ingin informasi rute, jadwal layanan, dan prosedur di ${item.name} (${selectedFloor === 4 ? 'Lantai 4/5' : 'Lantai ' + selectedFloor}).`
                           );
                         }}
-                        className="text-xs font-bold text-[#E11D48] hover:text-[#BE123C] hover:underline inline-flex items-center gap-1"
+                        className="text-xs font-bold text-[#E11D48] hover:text-[#BE123C] hover:underline inline-flex items-center gap-1 py-1"
                       >
                         <span>Tanyakan Ruangan Ini ke Asisten AI</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        <ArrowRight className="w-3.5 h-3.5 shrink-0" />
                       </button>
                     </div>
                   ))}
@@ -2070,7 +2096,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
               </div>
 
               {/* Kolom 4: Box Inovasi Kesehatan & Langganan (Sesuai Referensi Gambar) */}
-              <div className="lg:col-span-4 bg-slate-50 border border-slate-200/90 rounded-2xl sm:rounded-3xl p-6 sm:p-7 flex flex-col justify-between shadow-sm hover:border-[#E11D48] transition-all">
+              <div className="lg:col-span-4 bg-slate-50 border border-slate-200/90 rounded-2xl sm:rounded-3xl p-5 sm:p-7 flex flex-col justify-between shadow-sm hover:border-[#E11D48] transition-all">
                 <div className="space-y-2">
                   <h4 className="text-sm font-extrabold text-[#0F172A] tracking-tight leading-snug">
                     Inovasi Kesehatan AI. Tetap terhubung dengan RS Umbrella.
@@ -2081,25 +2107,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                 </div>
 
                 <form onSubmit={handleNewsletterSubmit} className="mt-4">
-                  <div className="relative flex items-center bg-white border border-slate-200 rounded-full p-1.5 focus-within:border-[#E11D48] focus-within:ring-2 focus-within:ring-rose-100 transition-all shadow-inner w-full">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-0 sm:bg-white sm:border sm:border-slate-200 sm:rounded-full sm:p-1.5 sm:focus-within:border-[#E11D48] sm:focus-within:ring-2 sm:focus-within:ring-rose-100 transition-all sm:shadow-inner w-full">
                     <input
                       type="email"
                       value={newsletterEmail}
                       onChange={(e) => setNewsletterEmail(e.target.value)}
                       placeholder="Masukkan email Anda"
                       required
-                      className="w-full min-w-0 flex-1 pl-3.5 pr-2 py-2 text-xs text-slate-800 placeholder-slate-400 bg-transparent focus:outline-none"
+                      className="w-full min-w-0 flex-1 px-4 sm:pl-3.5 sm:pr-2 py-2.5 sm:py-2 text-sm sm:text-xs text-slate-800 placeholder-slate-400 bg-white sm:bg-transparent border border-slate-200 sm:border-0 rounded-xl sm:rounded-none focus:outline-none focus:border-[#E11D48] sm:focus:border-transparent shadow-inner sm:shadow-none"
                     />
                     <button
                       type="submit"
-                      className="px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-full bg-[#E11D48] hover:bg-[#BE123C] text-white text-xs font-bold transition-all shadow-sm flex-shrink-0 active:scale-95 flex items-center space-x-1"
+                      className="min-h-[42px] sm:min-h-0 px-4 sm:px-5 py-2.5 rounded-xl sm:rounded-full bg-[#E11D48] hover:bg-[#BE123C] text-white text-xs font-bold transition-all shadow-sm flex-shrink-0 active:scale-95 flex items-center justify-center space-x-1.5 whitespace-nowrap"
                     >
                       <span>Langganan</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <ArrowRight className="w-3.5 h-3.5 shrink-0" />
                     </button>
                   </div>
                   {newsletterSubscribed && (
-                    <p className="text-[#E11D48] text-[11px] font-semibold mt-2.5 pl-2 flex items-center space-x-1 animate-fade-in">
+                    <p className="text-[#E11D48] text-[11px] font-semibold mt-2.5 pl-1 sm:pl-2 flex items-center space-x-1 animate-fade-in">
                       <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>Terima kasih! Email Anda telah terdaftar.</span>
                     </p>

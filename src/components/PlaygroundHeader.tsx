@@ -129,27 +129,27 @@ export const PlaygroundHeader: React.FC<PlaygroundHeaderProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] shadow-sm select-none flex-shrink-0">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-5 flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-50 w-full bg-white border-b border-[#E2E8F0] shadow-sm select-none flex-shrink-0">
+        <div className="max-w-[1440px] mx-auto px-3.5 sm:px-6 lg:px-8 py-3 sm:py-5 flex items-center justify-between gap-2 sm:gap-4">
 
           {/* Logo & Identitas Brand (Kiri) - Klik untuk kembali ke Beranda */}
           <button
             onClick={onBackToHome}
-            className="flex items-center space-x-3 sm:space-x-3.5 text-left group transition-all min-w-0"
+            className="flex items-center space-x-2.5 sm:space-x-3.5 text-left group transition-all min-w-0"
             title="Kembali ke Beranda Umbrella Healthcare"
           >
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#E11D48] flex items-center justify-center text-white shadow-md shadow-rose-500/25 flex-shrink-0 group-hover:scale-105 transition-transform">
-              <UmbrellaLogo size={24} className="sm:hidden" />
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#E11D48] flex items-center justify-center text-white shadow-md shadow-rose-500/25 flex-shrink-0 group-hover:scale-105 transition-transform">
+              <UmbrellaLogo size={22} className="sm:hidden" />
               <div className="hidden sm:block">
                 <UmbrellaLogo size={28} />
               </div>
             </div>
             <div className="min-w-0">
-              <div className="flex items-center space-x-1.5 sm:space-x-2">
-                <span className="font-extrabold text-lg sm:text-2xl tracking-tight text-[#0F172A]">
+              <div className="flex items-center space-x-1 sm:space-x-2 whitespace-nowrap">
+                <span className="font-extrabold text-base sm:text-2xl tracking-tight text-[#0F172A]">
                   Umbrella
                 </span>
-                <span className="font-bold text-lg sm:text-2xl tracking-tight text-[#E11D48]">
+                <span className="font-bold text-base sm:text-2xl tracking-tight text-[#E11D48]">
                   Healthcare
                 </span>
               </div>
@@ -229,10 +229,10 @@ export const PlaygroundHeader: React.FC<PlaygroundHeaderProps> = ({
           </div>
 
           {/* Sisi Kanan: Mobile / Tablet Controls (Tombol Kembali ke Beranda + Tombol Hamburger Menu) */}
-          <div className="lg:hidden flex items-center space-x-2">
+          <div className="lg:hidden flex items-center space-x-2 shrink-0">
             <button
               onClick={onBackToHome}
-              className="px-3.5 py-2 rounded-full bg-rose-50 text-[#E11D48] border border-rose-200 text-xs font-bold flex items-center space-x-1.5 active:scale-95 shadow-2xs"
+              className="px-3 py-2 rounded-full bg-rose-50 text-[#E11D48] border border-rose-200 text-xs font-bold flex items-center space-x-1.5 active:scale-95 shadow-2xs whitespace-nowrap shrink-0"
             >
               <span>Beranda</span>
             </button>
@@ -240,7 +240,7 @@ export const PlaygroundHeader: React.FC<PlaygroundHeaderProps> = ({
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2.5 rounded-xl sm:rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-[#E11D48] transition-all border border-slate-200/80 active:scale-95 focus:outline-none"
+              className="p-2.5 rounded-xl sm:rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-[#E11D48] transition-all border border-slate-200/80 active:scale-95 focus:outline-none shrink-0"
               aria-label={isMobileMenuOpen ? 'Tutup Menu Navigasi' : 'Buka Menu Navigasi'}
             >
               {isMobileMenuOpen ? (
@@ -257,21 +257,21 @@ export const PlaygroundHeader: React.FC<PlaygroundHeaderProps> = ({
         {isMobileMenuOpen && (
           <div
             onClick={() => setIsMobileMenuOpen(false)}
-            className="lg:hidden fixed inset-0 top-[61px] sm:top-[77px] bg-slate-950/40 backdrop-blur-sm z-30 transition-opacity animate-fade-in"
+            className="lg:hidden fixed inset-0 top-[61px] sm:top-[77px] bg-slate-950/60 backdrop-blur-sm z-40 transition-opacity animate-fade-in"
           />
         )}
 
-        {/* Panel Mobile Hamburger Drawer */}
+        {/* Panel Mobile Hamburger Drawer (Solid White agar tidak tembus pandang ke konten belakang) */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden absolute top-full left-0 right-0 w-full bg-white/98 backdrop-blur-xl border-b border-slate-200 shadow-2xl p-4 sm:p-6 z-40 animate-slide-down max-h-[calc(100vh-80px)] overflow-y-auto">
+          <div className="lg:hidden absolute top-full left-0 right-0 w-full bg-white border-b border-slate-200 shadow-2xl p-4 sm:p-6 z-50 animate-slide-down max-h-[calc(100vh-64px)] overflow-y-auto">
             <div className="space-y-4">
 
               {/* Header Info Singkat di Menu Mobile */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                   Navigasi Asisten AI
                 </span>
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#E11D48] bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#E11D48] bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200 whitespace-nowrap shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#E11D48] animate-pulse"></span>
                   Online Siaga 24/7
                 </span>
@@ -289,7 +289,7 @@ export const PlaygroundHeader: React.FC<PlaygroundHeaderProps> = ({
                         setIsMobileMenuOpen(false);
                         item.onClick?.();
                       }}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-left text-sm font-semibold transition-all ${isActive
+                      className={`w-full min-h-[46px] flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-left text-sm font-semibold transition-all ${isActive
                         ? 'bg-[#E11D48] text-white shadow-md shadow-rose-500/20'
                         : 'bg-slate-50 hover:bg-slate-100 text-slate-800'
                         }`}
@@ -297,16 +297,16 @@ export const PlaygroundHeader: React.FC<PlaygroundHeaderProps> = ({
                       <span>{item.label}</span>
                       {item.id === 'chatbot' ? (
                         <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${isActive ? 'bg-white text-[#E11D48]' : 'bg-rose-100 text-[#E11D48]'
+                          className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold whitespace-nowrap ${isActive ? 'bg-white text-[#E11D48]' : 'bg-rose-100 text-[#E11D48]'
                             }`}
                         >
                           AKTIF 24 JAM ✨
                         </span>
                       ) : item.id === 'beranda' ? (
-                        <span className="text-xs opacity-70">← Kembali</span>
+                        <span className="text-xs opacity-75 whitespace-nowrap">← Kembali</span>
                       ) : (
                         <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+                          className={`text-[10px] px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap ${isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
                             }`}
                         >
                           Coming Soon
@@ -318,63 +318,71 @@ export const PlaygroundHeader: React.FC<PlaygroundHeaderProps> = ({
               </div>
 
               {/* Tombol Panduan & Masuk/Daftar */}
-              <div className="pt-3 border-t border-slate-100 space-y-2">
+              <div className="pt-3 border-t border-slate-100 space-y-2.5">
                 <button
                   onClick={() => {
                     setIsMobileMenuOpen(false);
                     onOpenTutorial();
                   }}
-                  className="w-full py-2.5 px-4 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-800 font-semibold text-sm flex items-center justify-center space-x-2 transition-all active:scale-95"
+                  className="w-full min-h-[44px] py-2.5 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm flex items-center justify-center space-x-2 transition-all active:scale-95"
                 >
-                  <BookOpen className="w-4 h-4 text-[#E11D48]" />
+                  <BookOpen className="w-4 h-4 text-[#E11D48] shrink-0" />
                   <span>Buka Panduan Penggunaan AI</span>
                 </button>
 
                 {!user ? (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2.5">
                     <button
                       onClick={() => {
                         setIsMobileMenuOpen(false);
-                        setComingSoonFeature({
-                          title: 'Portal Masuk Pasien',
-                          desc: 'Layanan login autentikasi pasien sedang disiapkan untuk keamanan data medis terenkripsi.',
-                        });
+                        if (onOpenAuth) {
+                          onOpenAuth('login');
+                        } else {
+                          setComingSoonFeature({
+                            title: 'Portal Masuk Pasien',
+                            desc: 'Layanan login autentikasi pasien sedang disiapkan untuk keamanan data medis terenkripsi.',
+                          });
+                        }
                       }}
-                      className="w-full py-2.5 rounded-xl border border-slate-300 text-slate-800 hover:bg-slate-50 font-semibold text-sm text-center transition-all active:scale-95"
+                      className="w-full min-h-[44px] py-2.5 rounded-xl border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 font-semibold text-sm text-center transition-all active:scale-95"
                     >
                       Masuk
                     </button>
                     <button
                       onClick={() => {
                         setIsMobileMenuOpen(false);
-                        setComingSoonFeature({
-                          title: 'Pendaftaran Akun Pasien Baru',
-                          desc: 'Fitur pendaftaran akun digital pasien baru akan segera dibuka pada rilis portal tahap berikutnya.',
-                        });
+                        if (onOpenAuth) {
+                          onOpenAuth('register');
+                        } else {
+                          setComingSoonFeature({
+                            title: 'Pendaftaran Akun Pasien Baru',
+                            desc: 'Fitur pendaftaran akun digital pasien baru akan segera dibuka pada rilis portal tahap berikutnya.',
+                          });
+                        }
                       }}
-                      className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm text-center shadow-sm transition-all active:scale-95"
+                      className="w-full min-h-[44px] py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm text-center shadow-sm transition-all active:scale-95"
                     >
                       Daftar
                     </button>
                   </div>
                 ) : (
-                  <div className="text-center text-sm font-semibold text-slate-700 py-2">
+                  <div className="text-center text-sm font-semibold text-slate-700 py-2 bg-slate-50 rounded-xl border border-slate-200/80">
                     Halo, {user.email?.split('@')[0]}
                   </div>
                 )}
               </div>
 
               {/* Hotline IGD Darurat Mobile Banner */}
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-left text-xs text-slate-700 flex items-center justify-between">
-                <div>
-                  <div className="font-bold text-[#BE123C]">Hotline IGD Darurat: (021) 8065-9911</div>
-                  <div className="text-[11px] text-slate-500">Ambulans Siaga 24 Jam: 119</div>
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-left text-xs text-slate-700 flex items-center justify-between gap-2.5">
+                <div className="min-w-0">
+                  <div className="font-bold text-[#BE123C] leading-snug">Hotline IGD Darurat: (021) 8065-9911</div>
+                  <div className="text-[11px] text-slate-600 mt-0.5">Ambulans Siaga 24 Jam: 119</div>
                 </div>
                 <a
                   href="tel:02180659911"
-                  className="px-3 py-1.5 rounded-lg bg-[#E11D48] text-white font-bold text-xs shadow-sm flex items-center space-x-1"
+                  className="px-3.5 py-2 rounded-lg bg-[#E11D48] text-white font-bold text-xs shadow-sm flex items-center space-x-1.5 whitespace-nowrap shrink-0"
                 >
-                  <Phone className="w-3 h-3" />
+                  <Phone className="w-3.5 h-3.5" />
                   <span>Panggil</span>
                 </a>
               </div>
