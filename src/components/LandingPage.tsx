@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { UmbrellaLogo } from './UmbrellaLogo';
 import { AnimeBackground } from './AnimeBackground';
+import { ColdEmailCrowdHero } from './ui/cold-email-crowd-hero';
 import { AuthModal } from './AuthModal';
 import { RoomBookingModal } from './RoomBookingModal';
 import { MedicalRecordsModal } from './MedicalRecordsModal';
@@ -633,80 +634,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
         )}
       </header>
 
-      {/* Bagian Hero: Responsif untuk Semua Layar (Mobile, Tablet, Desktop) Tanpa Terpotong */}
-      <section id="beranda" className="relative overflow-hidden pt-8 pb-12 sm:pt-16 sm:pb-24 border-b border-[#E2E8F0] bg-white">
-
-        {/* Anime.js Interactive Staggered Grid Background */}
-        <AnimeBackground />
-
-        {/* Subtle Ambient Background Light */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1100px] h-[400px] bg-gradient-to-b from-rose-50/50 via-white to-transparent -z-10 blur-3xl pointer-events-none" />
-
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-4 items-center">
-
-            {/* Kolom Kiri: Judul Utama + Deskripsi Ringkas + Tombol Pill */}
-            <div className="lg:col-span-3 xl:col-span-3 space-y-4 sm:space-y-5 text-center lg:text-left">
-              <h1 className="anime-hero-stagger text-3xl sm:text-4xl lg:text-[2.8rem] xl:text-[3.2rem] font-bold tracking-tight text-[#0F172A] leading-[1.12]">
-                Pelayanan Medis <br className="hidden sm:inline" />
-                <span className="text-[#E11D48]">Modern &amp; Terpadu</span>
-              </h1>
-
-              <p className="anime-hero-stagger text-sm sm:text-base text-slate-500 leading-relaxed max-w-md mx-auto lg:mx-0 font-normal">
-                Pusat layanan kesehatan yang peduli dengan setiap pasien, didukung dokter spesialis dan asisten cerdas siaga 24 jam.
-              </p>
-
-              <div className="anime-hero-stagger pt-1 sm:pt-2 flex justify-center lg:justify-start">
-                <button
-                  onClick={() => handleLaunchAssistant()}
-                  className="inline-flex items-center space-x-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-full bg-[#E11D48] hover:bg-[#BE123C] text-white font-medium text-sm shadow-sm hover:shadow transition-all active:scale-95 hover:scale-105 group"
-                >
-                  <span>Konsultasi AI</span>
-                  <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">
-                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Kolom Tengah: Foto Dokter dengan Ukuran Lebih Besar & Gagah */}
-            <div className="lg:col-span-6 xl:col-span-6 relative flex items-end justify-center min-h-[320px] sm:min-h-[440px] lg:min-h-[520px]">
-              <div className="relative w-full max-w-[340px] sm:max-w-[480px] md:max-w-[580px] lg:max-w-[680px] xl:max-w-[740px] flex items-end justify-center z-10 anime-doctor-float select-none">
-                <img
-                  src={doctorImg}
-                  alt="Dokter RS PT Umbrella Corp"
-                  className="w-full h-auto max-h-[380px] sm:max-h-[500px] lg:max-h-[580px] xl:max-h-[640px] object-contain object-bottom select-none filter drop-shadow-xl scale-105 sm:scale-115 lg:scale-120 xl:scale-125 origin-bottom transition-transform duration-300"
-                  loading="eager"
-                />
-              </div>
-            </div>
-
-            {/* Kolom Kanan: Sisi Teknologi Bersih & Elegan */}
-            <div className="lg:col-span-3 xl:col-span-3 space-y-4 text-center lg:text-left lg:pl-4">
-              <h2 className="anime-hero-stagger text-2xl sm:text-3xl lg:text-[2.4rem] xl:text-[2.7rem] font-bold tracking-tight text-[#0F172A] leading-[1.15]">
-                Dengan <br className="hidden lg:inline" />
-                Kecerdasan <br className="hidden lg:inline" />
-                <span className="text-[#E11D48]">Buatan</span>
-              </h2>
-
-              <p className="anime-hero-stagger text-xs sm:text-sm text-slate-500 leading-relaxed max-w-sm mx-auto lg:mx-0 font-normal">
-                Peralatan diagnostik digital dan asisten AI bekerja terpadu untuk kemudahan cek jadwal dokter dan rawat inap Anda.
-              </p>
-
-              <div className="anime-hero-stagger pt-1 sm:pt-2 flex justify-center lg:justify-start">
-                <button
-                  onClick={() => handleLaunchAssistant()}
-                  className="inline-flex items-center space-x-1.5 text-xs sm:text-sm font-semibold text-[#E11D48] hover:text-[#BE123C] hover:underline group transition-all"
-                >
-                  <span>Mulai Konsultasi AI Sekarang</span>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
+      {/* Bagian Hero: Animatif (ColdEmailCrowdHero) */}
+      <section id="beranda" className="border-b border-[#E2E8F0] bg-white">
+        <ColdEmailCrowdHero
+          brand="Umbrella Healthcare"
+          onLaunchAssistant={handleLaunchAssistant}
+        />
       </section>
 
       {/* Pusat Eksplorasi Pasien & Fasilitas Rumah Sakit (Fitur Interaktif Nyata & Edukatif) */}
