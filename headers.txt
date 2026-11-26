@@ -1,0 +1,18 @@
+HTTP/1.1 200 OK
+content-type: audio/mpeg
+dg-model-name: fitri
+dg-model-uuid: 10bdb36f-aab6-462f-a9e3-717b4809f8dd
+dg-additional-model-uuids: 6108bb8e-1874-4d6f-baee-e54a865d85e3
+dg-char-count: 53
+dg-engine-instance: abd2dbac-f685-4f4a-8535-8c758755af7a
+dg-breaks-applied: 0
+dg-pronunciations-applied: 0
+dg-project-id: 73a967f2-6466-47ab-ba56-24025ca3aa33
+vary: origin, access-control-request-method, access-control-request-headers
+vary: accept-encoding
+access-control-allow-credentials: true
+access-control-expose-headers: dg-model-name,dg-model-uuid,dg-additional-model-uuids,dg-char-count,dg-request-id,dg-project-id,dg-error,dg-breaks-applied,dg-pronunciations-applied,dg-pronunciation-warnings,dg-engine-instance
+dg-request-id: 01a21518-6f3a-72e8-964d-b9cdd111b44a
+transfer-encoding: chunked
+date: Wed, 25 Nov 2026 23:44:12 GMT
+

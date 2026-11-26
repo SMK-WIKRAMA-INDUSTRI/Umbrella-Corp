@@ -70,6 +70,11 @@ interface QuickMenuCard {
 const getQuickMenuCards = (userText: string, aiText: string): QuickMenuCard[] => {
   const combined = `${userText} ${aiText}`.toLowerCase();
 
+  // Jangan tampilkan kartu kamar saat pengguna meminta booking/reservasi
+  if (/\b(booking|reservasi|pesan kamar|pendaftaran rawat inap)\b/.test(combined)) {
+    return [];
+  }
+
   if (/\b(kamar|rawat inap|bed|ranjang|paviliun|vvip|vip|kelas\s*[123]|icu|nicu|isolasi)\b/.test(combined)) {
     return [
       {
@@ -234,6 +239,7 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
   const sttControllerRef = useRef<SmartSTTController | null>(null);
   const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
   const speakAudioRef = useRef<HTMLAudioElement | null>(null);
+  const speakingIdRef = useRef<string | null>(null);
   const audioStopResolverRef = useRef<(() => void) | null>(null);
   const bargeInMonitorRef = useRef<{ stop: () => void } | null>(null);
   const callTurnIdRef = useRef(0);
@@ -533,8 +539,10 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
       MediaSource.isTypeSupported('audio/mpeg') &&
       response.body;
 
+    const backup = response.clone();
+
     if (!canStreamMse || !response.body) {
-      const blob = await response.blob();
+      const blob = await backup.blob();
       return playAudioBlob(blob);
     }
 
@@ -544,54 +552,12 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
 
     // Fallback ke Blob jika streaming MediaSource gagal diputar
     try {
-      const blob = await response.clone().blob();
+      const blob = await backup.blob();
       const fallbackAudio = createAgentAudio(blob);
       return await playAudioElement(fallbackAudio);
     } catch {
       return false;
     }
-  };
-
-  const speakWithBrowserFallback = async (chunks: string[]): Promise<boolean> => {
-    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
-      return false;
-    }
-
-    window.speechSynthesis.cancel();
-    await new Promise((r) => setTimeout(r, 40));
-    if (window.speechSynthesis.paused) {
-      window.speechSynthesis.resume();
-    }
-
-    const voices = window.speechSynthesis.getVoices();
-    const idVoice = voices.find((v) => v.lang.toLowerCase().startsWith('id'));
-
-    for (const chunk of chunks) {
-      if (!voiceCallActiveRef.current) return false;
-
-      const spoken = await new Promise<boolean>((resolve) => {
-        let settled = false;
-        const finish = (ok: boolean) => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(safetyTimer);
-          resolve(ok);
-        };
-
-        const safetyTimer = setTimeout(() => finish(true), Math.max(5000, chunk.length * 120));
-        const utterance = new SpeechSynthesisUtterance(chunk);
-        utterance.lang = 'id-ID';
-        if (idVoice) utterance.voice = idVoice;
-        utterance.rate = 0.98;
-        utterance.onend = () => finish(true);
-        utterance.onerror = () => finish(false);
-        window.speechSynthesis.speak(utterance);
-      });
-
-      if (!spoken) return false;
-    }
-
-    return true;
   };
 
   const speakVoiceReply = async (
@@ -641,17 +607,11 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
         return true;
       } catch (dgErr) {
         if (!voiceCallActiveRef.current || callTurnIdRef.current !== myTurnId) return false;
-        console.warn('Deepgram TTS fallback ke browser speechSynthesis:', dgErr);
-      }
-
-      // 2. Fallback ke browser speechSynthesis jika /api/tts gagal
-      const fallbackChunks = splitSpeechChunks(text, 180);
-      const fallbackOk = await speakWithBrowserFallback(fallbackChunks);
-      if (!fallbackOk && voiceCallActiveRef.current && callTurnIdRef.current === myTurnId) {
-        setVoiceCallError('Jawaban tidak dapat dibacakan. Pastikan server berjalan dan izin audio aktif.');
+        console.warn('Deepgram TTS gagal:', dgErr);
+        setVoiceCallError('Suara Fitri gagal dimuat. Coba lagi.');
         setVoiceCallPhase('error');
+        return false;
       }
-      return fallbackOk;
     } finally {
       resumeListening();
       bargeInMonitorRef.current?.stop();
@@ -712,8 +672,12 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
 
       setVoiceCallPhase('speaking');
       const spoken = await speakVoiceReply(reply, false, true);
-      if (spoken && voiceCallActiveRef.current && callTurnIdRef.current === myTurnId) {
-        await startVoiceListeningRef.current?.();
+      if (voiceCallActiveRef.current && callTurnIdRef.current === myTurnId) {
+        // Tunggu sebentar agar audio/STT sebelumnya benar-benar selesai, lalu dengarkan lagi.
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        if (voiceCallActiveRef.current && callTurnIdRef.current === myTurnId) {
+          await startVoiceListeningRef.current?.();
+        }
       }
     } catch (error) {
       if (!voiceCallActiveRef.current || callTurnIdRef.current !== myTurnId) return;
@@ -741,12 +705,34 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
           } else if (state === 'transcribing') {
             setVoiceCallPhase('transcribing');
           } else if (message) {
+            const noSpeech = /tidak ada suara|tidak terdeteksi|no[ -]?speech/i.test(message);
+            if (noSpeech) {
+              // Jangan tampilkan error; ulangi mendengarkan agar percakapan tetap berjalan.
+              sttControllerRef.current?.cancel?.();
+              sttControllerRef.current = null;
+              if (voiceCallActiveRef.current) {
+                setTimeout(() => {
+                  if (voiceCallActiveRef.current) void startVoiceListening();
+                }, 400);
+              }
+              return;
+            }
             setVoiceCallError(message);
             setVoiceCallPhase('error');
           }
         },
         onError: (message) => {
           if (!voiceCallActiveRef.current) return;
+          const lower = String(message || '').toLowerCase();
+          if (lower.includes('no-speech') || lower.includes('aborted')) {
+            // Kesalahan sementara; ulangi mendengarkan, jangan tampilkan error.
+            sttControllerRef.current?.cancel?.();
+            sttControllerRef.current = null;
+            setTimeout(() => {
+              if (voiceCallActiveRef.current) void startVoiceListening();
+            }, 400);
+            return;
+          }
           setVoiceCallError(message);
           setVoiceCallPhase('error');
         },
@@ -790,7 +776,9 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
     setVoiceCallPhase('speaking');
 
     const greeted = await speakVoiceReply(greetingText);
-    if (greeted && voiceCallActiveRef.current) {
+    if (voiceCallActiveRef.current) {
+      // Beri jeda agar mikrofon/barge-in detector sepenuhnya dilepas sebelum STT dimulai.
+      await new Promise((resolve) => setTimeout(resolve, 400));
       await startVoiceListeningRef.current?.();
     }
   };
@@ -892,6 +880,7 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
         speakAudioRef.current = null;
       }
       window.speechSynthesis.cancel();
+      speakingIdRef.current = null;
       setSpeakingId(null);
       return;
     }
@@ -902,6 +891,7 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
       speakAudioRef.current = null;
     }
     window.speechSynthesis.cancel();
+    speakingIdRef.current = id;
 
     const cleanSpeech = text
       .replace(/\*\*/g, '')
@@ -909,39 +899,35 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
       .replace(/[#*_-]/g, ' ')
       .trim();
 
-    if (!cleanSpeech) return;
-
+    if (!cleanSpeech) {
+      speakingIdRef.current = null;
+      setSpeakingId(null);
+      return;
+    }
     setSpeakingId(id);
     try {
       const blob = await synthesizeSpeech(cleanSpeech);
-      if (speakingId !== id) return; // dibatalkan
+      if (speakingIdRef.current !== id) return; // dibatalkan
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
       speakAudioRef.current = audio;
       audio.onended = () => {
         URL.revokeObjectURL(url);
         speakAudioRef.current = null;
+        speakingIdRef.current = null;
         setSpeakingId(null);
       };
       audio.onerror = () => {
         URL.revokeObjectURL(url);
         speakAudioRef.current = null;
+        speakingIdRef.current = null;
         setSpeakingId(null);
       };
       await audio.play();
     } catch (err) {
-      console.warn('Deepgram TTS gagal, fallback ke browser speechSynthesis:', err);
-      // Fallback ke browser
-      if (!('speechSynthesis' in window)) {
-        setSpeakingId(null);
-        return;
-      }
-      const utterance = new SpeechSynthesisUtterance(cleanSpeech);
-      utterance.lang = 'id-ID';
-      utterance.rate = 1.0;
-      utterance.onend = () => setSpeakingId(null);
-      utterance.onerror = () => setSpeakingId(null);
-      window.speechSynthesis.speak(utterance);
+      console.warn('Deepgram TTS gagal:', err);
+      speakingIdRef.current = null;
+      setSpeakingId(null);
     }
   };
 

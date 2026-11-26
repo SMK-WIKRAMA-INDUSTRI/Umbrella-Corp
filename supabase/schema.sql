@@ -240,3 +240,39 @@ create policy "chat_messages_delete"
 
 grant select, insert, update, delete on public.chat_sessions to anon, authenticated;
 grant select, insert, update, delete on public.chat_messages to anon, authenticated;
+
+-- ============================================
+-- Room Bookings (reservasi kamar rawat inap)
+-- ============================================
+create table if not exists public.room_bookings (
+  id uuid primary key default gen_random_uuid(),
+  booking_code text not null unique,
+  patient_name text not null,
+  phone text not null,
+  room_class text not null,
+  bed_id text,
+  nights integer not null default 1,
+  check_in date,
+  notes text,
+  total_amount bigint,
+  status text not null default 'pending',
+  created_at timestamptz not null default now()
+);
+
+alter table public.room_bookings enable row level security;
+
+drop policy if exists "room_bookings_insert_all" on public.room_bookings;
+create policy "room_bookings_insert_all"
+  on public.room_bookings
+  for insert
+  to anon, authenticated
+  with check (true);
+
+drop policy if exists "room_bookings_select_all" on public.room_bookings;
+create policy "room_bookings_select_all"
+  on public.room_bookings
+  for select
+  to anon, authenticated
+  using (true);
+
+grant select, insert on public.room_bookings to anon, authenticated;

@@ -119,6 +119,11 @@ export async function synthesizeSpeechResponse(text: string): Promise<Response> 
       throw new Error(data?.message || `Layanan suara Deepgram gagal (HTTP ${response.status}).`);
     }
 
+    const provider = response.headers.get('X-TTS-Provider');
+    if (provider && !provider.startsWith('deepgram:')) {
+      console.warn('TTS provider yang dipakai:', provider);
+    }
+
     return response;
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {

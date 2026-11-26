@@ -4,6 +4,7 @@ import {
   MessageSquare,
   Calendar,
   Bed,
+  BedDouble,
   PhoneCall,
   ShieldCheck,
   FileText,
@@ -37,6 +38,7 @@ import {
 import { UmbrellaLogo } from './UmbrellaLogo';
 import { AnimeBackground } from './AnimeBackground';
 import { AuthModal } from './AuthModal';
+import { RoomBookingModal } from './RoomBookingModal';
 import { MedicalRecordsModal } from './MedicalRecordsModal';
 import { LocationMapModal } from './LocationMapModal';
 import { useAuth } from '../contexts/AuthContext';
@@ -128,6 +130,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
 
   // State menu navigasi seluler (Hamburger menu untuk layar HP & Tablet)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isRoomBookingOpen, setIsRoomBookingOpen] = useState(false);
 
   // State & Ref untuk Navigasi Pill Ager-Ager (Glasses Jelly Highlight yang meluncur halus mengikuti kursor)
   const [activeNav, setActiveNav] = useState('beranda');
@@ -1173,6 +1176,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                       <PhoneCall className="w-3.5 h-3.5 text-[#E11D48]" />
                       <span>Telepon Admisi Rawat Inap (021) 8065-9911</span>
                     </a>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsRoomBookingOpen(true)}
+                      className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs border border-emerald-700 flex items-center justify-center gap-2 transition-all"
+                    >
+                      <BedDouble className="w-3.5 h-3.5" />
+                      <span>Reservasi Kamar (Catat ke Database)</span>
+                    </button>
                   </div>
 
                 </div>
@@ -2251,6 +2263,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
         isOpen={authOpen}
         onClose={() => setAuthOpen(false)}
         initialMode={authMode}
+      />
+      <RoomBookingModal
+        isOpen={isRoomBookingOpen}
+        onClose={() => setIsRoomBookingOpen(false)}
+        defaultRoomClass={
+          calcRoomType === 'vvip' ? 'VVIP Aster Suite' : calcRoomType === 'aster' ? 'VIP Aster' : 'VIP Melati'
+        }
+        defaultBedId={selectedBedId}
+        defaultNights={calcNights}
       />
       <MedicalRecordsModal isOpen={medicalOpen} onClose={() => setMedicalOpen(false)} />
       <LocationMapModal isOpen={locationOpen} onClose={() => setLocationOpen(false)} />

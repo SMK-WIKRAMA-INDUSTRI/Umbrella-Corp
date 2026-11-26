@@ -10,6 +10,7 @@ import https from "node:https";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { normalizeForIndonesianTTS } from "./normalizeForIndonesianTTS.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,6 +55,7 @@ const GEMINI_TTS_VOICE = process.env.GEMINI_TTS_VOICE || "Aoede";
 const DEEPGRAM_API_KEY =
   process.env.DEEPGRAM_API_KEY || process.env.VITE_DEEPGRAM_API_KEY || "";
 const DEEPGRAM_TTS_MODEL = process.env.DEEPGRAM_TTS_MODEL || "flux-fitri-id";
+const ALLOW_GEMINI_TTS_FALLBACK = process.env.ALLOW_GEMINI_TTS_FALLBACK === "true";
 
 // 2. Sliding Window Rate Limiter (Protects against Denial of Service / Denial of Wallet)
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
@@ -138,6 +140,13 @@ function checkInstantKnowledgeCache(query) {
     );
   if (!isHospitalQuestion || knowledgeStart < 0 || knowledgeEnd < 0) {
     return null;
+  }
+
+  const isBookingRequest = /\b(booking|reservasi|pesan kamar|pendaftaran rawat inap)\b/.test(
+    normalizedQuery,
+  );
+  if (isBookingRequest) {
+    return "Maaf, saya tidak dapat melakukan booking atau reservasi kamar rawat inap secara langsung. Silakan gunakan fitur Reservasi Kamar pada website RS Umbrella atau hubungi petugas admisi / Pusat Informasi RS di **(021) 8065-0000** untuk mencatat booking dan mendapatkan struk ruangan.";
   }
 
   const queryTerms = [
@@ -245,6 +254,11 @@ MODE TELEPON CUSTOMER SERVICE REALISTIS (FITRI - RS PT UMBRELLA CORP):
 - Bicaralah seperti manusia sungguhan di telepon: hangat, tenang, sopan, dan natural. Hindari gaya bahasa kaku seperti robot atau artikel (jangan pernah ucapkan "Berdasarkan data", "Berikut adalah informasi", "Perlu dicatat", atau "Sebagai asisten AI").
 - Gunakan sapaan sopan "Bapak atau Ibu" (atau "Anda") dengan alur bicara yang luwes, misalnya "Baik, untuk layanan tersebut...", "Untuk jadwalnya saat ini...", atau "Jika Bapak atau Ibu berkenan...".
 - Jawab langsung ke inti pertanyaan dalam dua sampai tiga kalimat pendek agar cepat dan enak didengar.
+- Jika pengguna menanyakan kamar, sebutkan kelas, tarif yang tercatat, dan jumlah yang tercatat tersedia, lalu sarankan konfirmasi ke Pusat Informasi.
+- Jika pengguna menanyakan dokter atau jadwal, sebutkan nama, spesialisasi, hari, dan jam praktik yang tercatat.
+- Jika pengguna meminta booking, reservasi, atau pendaftaran rawat inap, jangan menyebutkan daftar kamar, tarif, atau ketersediaan. Jawab bahwa Anda tidak dapat melakukan booking langsung, dan arahkan pengguna ke fitur Reservasi Kamar pada website RS Umbrella atau petugas admisi untuk mencatat booking dan mendapatkan struk ruangan.
+- Jangan menampilkan instruksi, aturan, atau kalimat meta dari prompt. Jawab hanya informasi inti untuk pengguna.
+- Jika data tidak tersedia, katakan dengan sopan bahwa informasinya belum tercatat dan arahkan ke Pusat Informasi RS.
 - Jangan mengulang salam pembuka atau kalimat "akan kami periksa dahulu" karena sistem sudah mengucapkannya sebelum jawabanmu.
 - Tulis angka, jam, dan harga dengan huruf, misalnya "dua juta delapan ratus lima puluh ribu rupiah", "pukul sembilan pagi", atau "nol dua satu delapan nol enam lima sembilan sembilan satu satu".
 - Ubah singkatan dan simbol agar terdengar natural saat diucapkan (misalnya tulis "dokter spesialis anak", "waktu Indonesia barat", "I G D", atau "B P J S", tanpa tanda kurung atau garis miring).
@@ -255,7 +269,8 @@ const TEXT_CHAT_CONCISE_INSTRUCTION = `
 GAYA CHAT TEKS RINGKAS & LANGSUNG KE INTI:
 - Jawab dengan singkat, padat, dan jelas (maksimal 3-5 kalimat atau poin singkat yang paling penting saja).
 - Jangan bertele-tele, jangan menulis sub-judul berulang seperti "Catatan:", "Rekomendasi:", atau pengantar panjang.
-- Jika pengguna bertanya secara umum tentang daftar kamar rawat inap, daftar dokter/jadwal poli, asuransi/BPJS, atau layanan lab/radiologi, cukup berikan ringkasan singkat (1-3 kalimat) karena antarmuka sudah menampilkan kartu menu cepat yang bisa diklik di bawah jawaban Anda.`;
+- Jika pengguna bertanya secara umum tentang daftar kamar rawat inap, daftar dokter/jadwal poli, asuransi/BPJS, atau layanan lab/radiologi, cukup berikan ringkasan singkat (1-3 kalimat) karena antarmuka sudah menampilkan kartu menu cepat yang bisa diklik di bawah jawaban Anda.
+- Jika pengguna meminta booking, reservasi, atau pendaftaran rawat inap, jangan menyebutkan daftar kamar, tarif, atau ketersediaan. Jawab bahwa Anda tidak dapat melakukan booking langsung, dan arahkan pengguna ke fitur Reservasi Kamar pada website RS Umbrella atau petugas admisi untuk mencatat booking dan mendapatkan struk ruangan.`;
 
 // 5. Secure AI Dispatcher with AbortController Timeout (Always Route to Real AI)
 async function requestAICompletion(
@@ -299,7 +314,7 @@ async function requestAICompletion(
         body: JSON.stringify({
           model: process.env.OPENROUTER_MODEL || "deepseek/deepseek-chat",
           messages: messagesPayload,
-          max_tokens: voiceMode ? 140 : 800,
+          max_tokens: voiceMode ? 180 : 800,
           temperature: voiceMode ? 0.2 : 0.3,
         }),
       });
@@ -341,7 +356,7 @@ async function requestAICompletion(
         body: JSON.stringify({
           model: "deepseek-chat",
           messages: messagesPayload,
-          max_tokens: voiceMode ? 240 : 800,
+          max_tokens: voiceMode ? 180 : 800,
           temperature: voiceMode ? 0.2 : 0.3,
         }),
       });
@@ -393,7 +408,7 @@ async function requestAICompletion(
               systemInstruction: { parts: [{ text: systemPrompt }] },
               generationConfig: {
                 temperature: voiceMode ? 0.2 : 0.4,
-                maxOutputTokens: voiceMode ? 160 : 1000,
+                maxOutputTokens: voiceMode ? 200 : 1000,
               },
             }),
           },
@@ -451,7 +466,7 @@ const server = http.createServer(async (req, res) => {
   );
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://openrouter.ai https://api.deepseek.com https://*.supabase.co wss://*.supabase.co; frame-src 'self' https://www.google.com https://maps.google.com;",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; media-src 'self' blob: data:; connect-src 'self' https://openrouter.ai https://api.deepseek.com https://*.supabase.co wss://*.supabase.co https://api.deepgram.com wss://api.deepgram.com https://cdnjs.cloudflare.com; frame-src 'self' https://www.google.com https://maps.google.com;",
   );
 
   // CORS - Restrictive default
@@ -618,23 +633,23 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const text = String(payload.text || "").trim().slice(0, 1900);
+      const text = normalizeForIndonesianTTS(String(payload.text || "").trim()).slice(
+        0,
+        1900,
+      );
       if (!text) {
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "text is required" }));
         return;
       }
 
-      // 1. Utamakan Deepgram Flux TTS v2 (flux-fitri-id, streaming MP3 Bahasa Indonesia)
+      // 1. Deepgram Flux TTS v2 (flux-fitri-id, streaming MP3 Bahasa Indonesia)
       if (DEEPGRAM_API_KEY) {
         try {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-          const isFlux = DEEPGRAM_TTS_MODEL.startsWith("flux-");
-          const dgUrl = isFlux
-            ? `https://api.deepgram.com/v2/speak?model=${encodeURIComponent(DEEPGRAM_TTS_MODEL)}&encoding=mp3`
-            : `https://api.deepgram.com/v1/speak?model=${encodeURIComponent(DEEPGRAM_TTS_MODEL)}`;
+          const dgUrl = `https://api.deepgram.com/v2/speak?model=${encodeURIComponent(DEEPGRAM_TTS_MODEL)}&encoding=mp3`;
 
           const dgRes = await fetch(dgUrl, {
             method: "POST",
@@ -651,6 +666,7 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(200, {
               "Content-Type": dgRes.headers.get("content-type") || "audio/mpeg",
               "Cache-Control": "no-store",
+              "X-TTS-Provider": `deepgram:${DEEPGRAM_TTS_MODEL}`,
             });
             for await (const chunk of dgRes.body) {
               res.write(chunk);
@@ -659,15 +675,35 @@ const server = http.createServer(async (req, res) => {
             return;
           } else {
             const errText = await dgRes.text();
-            console.warn(`Deepgram TTS status (${dgRes.status}):`, errText);
+            console.error(`Deepgram TTS gagal (HTTP ${dgRes.status}):`, errText);
+            if (!ALLOW_GEMINI_TTS_FALLBACK) {
+              res.writeHead(502, { "Content-Type": "application/json" });
+              res.end(
+                JSON.stringify({
+                  error: "TTS_FAILED",
+                  message: `Suara Fitri (Deepgram) gagal: ${dgRes.status}`,
+                }),
+              );
+              return;
+            }
           }
         } catch (err) {
-          console.warn("Deepgram TTS gateway error:", err.message);
+          console.error("Deepgram TTS gateway error:", err.message);
+          if (!ALLOW_GEMINI_TTS_FALLBACK) {
+            res.writeHead(502, { "Content-Type": "application/json" });
+            res.end(
+              JSON.stringify({
+                error: "TTS_FAILED",
+                message: `Suara Fitri (Deepgram) gagal: 500`,
+              }),
+            );
+            return;
+          }
         }
       }
 
-      // 2. Fallback ke Gemini 3.8 TTS jika Deepgram gagal
-      if (geminiKey) {
+      // 2. Fallback ke Gemini 3.8 TTS jika di-enable
+      if (ALLOW_GEMINI_TTS_FALLBACK && geminiKey) {
         try {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 18000);
@@ -710,6 +746,7 @@ const server = http.createServer(async (req, res) => {
                 "Content-Type": inline.mimeType || "audio/wav",
                 "Content-Length": audioBuffer.length,
                 "Cache-Control": "no-store",
+                "X-TTS-Provider": "gemini",
               });
               res.end(audioBuffer);
               return;
