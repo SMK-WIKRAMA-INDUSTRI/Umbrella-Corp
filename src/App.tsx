@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { LandingPage } from './components/LandingPage';
+import { RoomBookingModal } from './components/RoomBookingModal';
 import { PlaygroundHeader } from './components/PlaygroundHeader';
 import { ChatPlayground, ChatItem } from './components/ChatPlayground';
 import { TutorialModal } from './components/TutorialModal';
-import { SettingsPanel } from './components/SettingsPanel';
+
 import { AuthModal } from './components/AuthModal';
 import { useAuth } from './contexts/AuthContext';
 import {
@@ -50,9 +51,9 @@ export const App: React.FC = () => {
       mounted = false;
     };
   }, [user?.id]);
-  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [isRoomBookingOpen, setIsRoomBookingOpen] = useState<boolean>(false);
   const [apiKey, setApiKey] = useState<string>('');
   const [systemContext, setSystemContext] = useState<string>(DEFAULT_HOSPITAL_CONTEXT);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
@@ -81,6 +82,42 @@ export const App: React.FC = () => {
   // Kirim pertanyaan ke Gemini AI
   const handleSendMessage = async (queryText: string): Promise<string> => {
     const timestamp = getCurrentWIB();
+
+    // Deteksi intent reservasi kamar -> buka form (data masuk ke Supabase room_bookings)
+    const lower = queryText.toLowerCase();
+    const isBookingIntent =
+      /reservasi\s*kamar/.test(lower) ||
+      (lower.includes('reservasi') && lower.includes('kamar')) ||
+      lower.includes('pesan kamar') ||
+      lower.includes('booking kamar');
+
+    if (isBookingIntent) {
+      const userMessage: ChatItem = {
+        id: `usr-${Date.now()}`,
+        sender: 'user',
+        text: queryText,
+        timestamp,
+      };
+      const updatedMessages = [...messages, userMessage];
+      setMessages(updatedMessages);
+      if (sessionId) {
+        void persistMessage(sessionId, userMessage);
+      }
+
+      const aiMessage: ChatItem = {
+        id: `ai-${Date.now()}`,
+        sender: 'ai',
+        text: 'Baik, saya buka formulir reservasi kamar rawat inap. Silakan isi data pasien, kelas kamar, dan durasi. Data akan dicatat ke database RS Umbrella.',
+        timestamp: getCurrentWIB(),
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+      if (sessionId) {
+        void persistMessage(sessionId, aiMessage);
+      }
+
+      setIsRoomBookingOpen(true);
+      return aiMessage.text;
+    }
 
     // 1. Tambahkan Pesan Pasien/Pengguna
     const userMessage: ChatItem = {
@@ -183,41 +220,16 @@ export const App: React.FC = () => {
           isLoading={isLoading}
           onSendMessage={handleSendMessage}
           onClearChat={handleClearChat}
+          uploadedFileName={uploadedFileName}
+          onFileUpload={(file, extractedText) => {
+            setUploadedFileName(file.name);
+            if (extractedText) {
+              setUploadedDocumentText((prev) => (prev ? prev + '\\n\\n' + extractedText : extractedText));
+            }
+          }}
         />
 
-        {/* Tombol Pengaturan (untuk akses upload PDF & API key) */}
-        <button
-          type="button"
-          onClick={() => setIsSettingsOpen(true)}
-          className="absolute top-3 right-3 z-30 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-        >
-          Pengaturan
-        </button>
 
-        {isSettingsOpen && (
-          <div className="absolute inset-0 z-40 flex">
-            <div className="flex-1 min-w-0 bg-black/30" onClick={() => setIsSettingsOpen(false)} />
-            <div className="w-full max-w-md h-full">
-              <SettingsPanel
-                apiKey={apiKey}
-                onApiKeyChange={setApiKey}
-                rememberKey={rememberKey}
-                onToggleRememberKey={setRememberKey}
-                selectedModel={selectedModel}
-                onModelChange={setSelectedModel}
-                systemContext={systemContext}
-                onContextChange={setSystemContext}
-                uploadedFileName={uploadedFileName}
-                onFileUpload={(file, extractedText) => {
-                  setUploadedFileName(file.name);
-                  if (extractedText) {
-                    setUploadedDocumentText((prev) => (prev ? prev + '\n\n' + extractedText : extractedText));
-                  }
-                }}
-              />
-            </div>
-          </div>
-        )}
       </main>
 
       {/* Modal Panduan Penggunaan */}
@@ -230,6 +242,11 @@ export const App: React.FC = () => {
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
         initialMode={authMode}
+      />
+
+      <RoomBookingModal
+        isOpen={isRoomBookingOpen}
+        onClose={() => setIsRoomBookingOpen(false)}
       />
 
     </div>

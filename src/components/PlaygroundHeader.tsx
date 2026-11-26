@@ -4,6 +4,7 @@ import { BookOpen, Clock, X, Menu, Phone } from 'lucide-react';
 import { MedicalRecordsModal } from './MedicalRecordsModal';
 import { LocationMapModal } from './LocationMapModal';
 import { UmbrellaLogo } from './UmbrellaLogo';
+import { useAuth } from '../contexts/AuthContext';
 
 interface PlaygroundHeaderProps {
   onOpenTutorial: () => void;
@@ -18,6 +19,7 @@ export const PlaygroundHeader: React.FC<PlaygroundHeaderProps> = ({
   messageCount,
   onOpenAuth,
 }) => {
+  const { user } = useAuth();
   // State modal untuk fitur yang berstatus "Coming Soon"
   const [comingSoonFeature, setComingSoonFeature] = useState<{ title: string; desc: string } | null>(null);
   const [medicalOpen, setMedicalOpen] = useState(false);
@@ -202,21 +204,28 @@ export const PlaygroundHeader: React.FC<PlaygroundHeaderProps> = ({
             })}
           </nav>
 
-          {/* Sisi Kanan: Desktop (Masuk & Daftar) */}
+          {/* Sisi Kanan: Desktop (Masuk & Daftar) - hanya jika belum login */}
           <div className="hidden lg:flex items-center space-x-3">
-            <button
-              onClick={() => onOpenAuth?.('login')}
-              className="px-5 py-2.5 text-sm sm:text-base font-semibold text-slate-700 hover:text-[#E11D48] transition-colors active:scale-95"
-            >
-              Masuk
-            </button>
-
-            <button
-              onClick={() => onOpenAuth?.('register')}
-              className="px-6 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm sm:text-base shadow-sm hover:shadow-md transition-all active:scale-95"
-            >
-              Daftar
-            </button>
+            {!user ? (
+              <>
+                <button
+                  onClick={() => onOpenAuth?.('login')}
+                  className="px-5 py-2.5 text-sm sm:text-base font-semibold text-slate-700 hover:text-[#E11D48] transition-colors active:scale-95"
+                >
+                  Masuk
+                </button>
+                <button
+                  onClick={() => onOpenAuth?.('register')}
+                  className="px-6 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm sm:text-base shadow-sm hover:shadow-md transition-all active:scale-95"
+                >
+                  Daftar
+                </button>
+              </>
+            ) : (
+              <span className="text-sm font-semibold text-slate-700">
+                Halo, {user.email?.split('@')[0]}
+              </span>
+            )}
           </div>
 
           {/* Sisi Kanan: Mobile / Tablet Controls (Tombol Kembali ke Beranda + Tombol Hamburger Menu) */}
@@ -321,32 +330,38 @@ export const PlaygroundHeader: React.FC<PlaygroundHeaderProps> = ({
                   <span>Buka Panduan Penggunaan AI</span>
                 </button>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      setComingSoonFeature({
-                        title: 'Portal Masuk Pasien',
-                        desc: 'Layanan login autentikasi pasien sedang disiapkan untuk keamanan data medis terenkripsi.',
-                      });
-                    }}
-                    className="w-full py-2.5 rounded-xl border border-slate-300 text-slate-800 hover:bg-slate-50 font-semibold text-sm text-center transition-all active:scale-95"
-                  >
-                    Masuk
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      setComingSoonFeature({
-                        title: 'Pendaftaran Akun Pasien Baru',
-                        desc: 'Fitur pendaftaran akun digital pasien baru akan segera dibuka pada rilis portal tahap berikutnya.',
-                      });
-                    }}
-                    className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm text-center shadow-sm transition-all active:scale-95"
-                  >
-                    Daftar
-                  </button>
-                </div>
+                {!user ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        setComingSoonFeature({
+                          title: 'Portal Masuk Pasien',
+                          desc: 'Layanan login autentikasi pasien sedang disiapkan untuk keamanan data medis terenkripsi.',
+                        });
+                      }}
+                      className="w-full py-2.5 rounded-xl border border-slate-300 text-slate-800 hover:bg-slate-50 font-semibold text-sm text-center transition-all active:scale-95"
+                    >
+                      Masuk
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        setComingSoonFeature({
+                          title: 'Pendaftaran Akun Pasien Baru',
+                          desc: 'Fitur pendaftaran akun digital pasien baru akan segera dibuka pada rilis portal tahap berikutnya.',
+                        });
+                      }}
+                      className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm text-center shadow-sm transition-all active:scale-95"
+                    >
+                      Daftar
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center text-sm font-semibold text-slate-700 py-2">
+                    Halo, {user.email?.split('@')[0]}
+                  </div>
+                )}
               </div>
 
               {/* Hotline IGD Darurat Mobile Banner */}

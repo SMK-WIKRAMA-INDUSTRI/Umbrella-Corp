@@ -57,6 +57,8 @@ interface ChatPlaygroundProps {
   isLoading: boolean;
   onSendMessage: (query: string) => Promise<string>;
   onClearChat: () => void;
+  uploadedFileName?: string | null;
+  onFileUpload?: (file: File, extractedText?: string) => void;
 }
 
 interface QuickMenuCard {
@@ -215,11 +217,16 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
   isLoading,
   onSendMessage,
   onClearChat,
+  uploadedFileName,
+  onFileUpload,
 }) => {
   const [inputText, setInputText] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [ratedMap, setRatedMap] = useState<Record<string, 'up' | 'down'>>({});
   const [seniorMode, setSeniorMode] = useState(false);
+  const [isProcessingDoc, setIsProcessingDoc] = useState(false);
+  const [docStatus, setDocStatus] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
 
   // Speech-to-Text State
@@ -865,6 +872,63 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
         }
       }, 0);
     }
+  };
+
+  const loadPdfJs = async () => {
+    const w = window as any;
+    if (!w.__pdfjsPromise) {
+      w.__pdfjsPromise = (async () => {
+        const pdfjsLib: any = await (new Function('return import("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs")') as () => Promise<any>)();
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs';
+        return pdfjsLib;
+      })();
+    }
+    return w.__pdfjsPromise;
+  };
+
+  const extractPdfText = async (file: File): Promise<{ pages: number; text: string }> => {
+    const pdfjsLib = await loadPdfJs();
+    const data = new Uint8Array(await file.arrayBuffer());
+    const pdf = await pdfjsLib.getDocument({ data }).promise;
+    const pageCount = pdf.numPages;
+    const pageTexts: string[] = [];
+    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber++) {
+      const page = await pdf.getPage(pageNumber);
+      const content = await page.getTextContent();
+      const text = content.items.map((item: any) => item.str + (item.hasEOL ? '\\n' : ' ')).join('');
+      pageTexts.push(text.trim());
+    }
+    await pdf.destroy();
+    const text = pageTexts.join('\\n\\n').replace(/[ \\t]+/g, ' ').trim();
+    return { pages: pageCount, text };
+  };
+
+  const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setIsProcessingDoc(true);
+    setDocStatus('');
+    let success = 0;
+    for (const file of files) {
+      try {
+        let text = '';
+        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+        if (isPdf) {
+          const res = await extractPdfText(file);
+          text = res.text;
+          if (!text) continue;
+        } else {
+          text = await file.text();
+        }
+        onFileUpload?.(file, text);
+        success++;
+      } catch (err) {
+        console.warn('Gagal membaca berkas:', file.name, err);
+      }
+    }
+    setDocStatus(success > 0 ? `${success} dokumen berhasil dibaca` : 'Tidak ada dokumen yang dapat dibaca');
+    setIsProcessingDoc(false);
+    if (e.target) e.target.value = '';
   };
 
   const handleRate = (id: string, type: 'up' | 'down') => {
@@ -1537,7 +1601,17 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
               style={{ minHeight: '40px', maxHeight: '120px' }}
             />
 
-            {/* Action Buttons Zone: Clear, Mic STT, Kirim */}
+            {/* Hidden file input for PDF upload */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt,.pdf,.md,.json"
+              multiple
+              onChange={handleDocUpload}
+              className="hidden"
+            />
+
+            {/* Action Buttons Zone: Clear, Upload PDF, Mic STT, Kirim */}
             <div className="flex items-center space-x-1.5 pb-1 pr-1 flex-shrink-0">
               {/* Clear Text button */}
               {inputText.trim().length > 0 && !isListening && (
@@ -1553,6 +1627,21 @@ export const ChatPlayground: React.FC<ChatPlaygroundProps> = ({
                   <X className="w-4 h-4" />
                 </button>
               )}
+
+              {/* Tombol Upload PDF/Dokumen */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isProcessingDoc || isLoading}
+                className="p-2 rounded-xl text-slate-500 hover:text-[#E11D48] hover:bg-rose-50 transition-colors"
+                title="Unggah PDF/Dokumen agar chatbot membacanya"
+              >
+                {isProcessingDoc ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-[#E11D48]" />
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+                )}
+              </button>
 
               {/* Tombol Mic (Speech-to-Text Deepgram) */}
               <button

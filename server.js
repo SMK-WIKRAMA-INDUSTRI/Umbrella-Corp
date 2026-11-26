@@ -45,9 +45,17 @@ loadEnv();
 
 const PORT = process.env.PORT || 5000;
 const DEEPSEEK_API_KEY =
-  process.env.DEEPSEEK_API_KEY || process.env.VITE_DEEPSEEK_API_KEY || "";
+  process.env.DEEPSEEK_API_KEY ||
+  process.env.VITE_DEEPSEEK_API_KEY ||
+  process.env.VITE_OPENROUTER_API_KEY ||
+  "";
 const OPENROUTER_API_KEY =
-  process.env.OPENROUTER_API_KEY || process.env.VITE_OPENROUTER_API_KEY || "";
+  process.env.OPENROUTER_API_KEY ||
+  process.env.VITE_OPENROUTER_API_KEY ||
+  (process.env.VITE_DEEPSEEK_API_KEY?.startsWith("sk-or-v1-")
+    ? process.env.VITE_DEEPSEEK_API_KEY
+    : "") ||
+  "";
 const GEMINI_API_KEY =
   process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || "";
 const GEMINI_TTS_MODEL = process.env.GEMINI_TTS_MODEL || "gemini-3.8-flash-tts";
@@ -187,9 +195,8 @@ function checkInstantKnowledgeCache(query) {
         ),
     ),
   ];
-  const stopWords = new Set(["dokter", "spesialis", "jadwal", "praktik", "poli"]);
+  const stopWords = new Set(["dokter", "spesialis", "jadwal", "praktik", "poli", "informasi"]);
   const detailTerms = queryTerms.filter((term) => !stopWords.has(term));
-  if (detailTerms.length === 0) return null;
 
   const doctorNames = ["budi", "rina", "andi", "ratna", "farhan", "hendra", "jessica", "nadia"];
   const specialties = [
@@ -206,7 +213,6 @@ function checkInstantKnowledgeCache(query) {
   ];
   const asksForAllDoctors =
     /\b(dokter|dr|spesialis)\b/.test(normalizedQuery) &&
-    /\b(semua|daftar|list)\b/.test(normalizedQuery) &&
     !doctorNames.some((name) => normalizedQuery.includes(name)) &&
     !specialties.some((specialty) => normalizedQuery.includes(specialty));
 
@@ -272,6 +278,9 @@ GAYA CHAT TEKS RINGKAS & LANGSUNG KE INTI:
 - Jika pengguna bertanya secara umum tentang daftar kamar rawat inap, daftar dokter/jadwal poli, asuransi/BPJS, atau layanan lab/radiologi, cukup berikan ringkasan singkat (1-3 kalimat) karena antarmuka sudah menampilkan kartu menu cepat yang bisa diklik di bawah jawaban Anda.
 - Jika pengguna meminta booking, reservasi, atau pendaftaran rawat inap, jangan menyebutkan daftar kamar, tarif, atau ketersediaan. Jawab bahwa Anda tidak dapat melakukan booking langsung, dan arahkan pengguna ke fitur Reservasi Kamar pada website RS Umbrella atau petugas admisi untuk mencatat booking dan mendapatkan struk ruangan.`;
 
+const CONDENSED_HOSPITAL_PROMPT =
+  "Anda adalah asisten virtual RS PT Umbrella Corp. Jawab singkat, sopan, dan natural dalam Bahasa Indonesia. Untuk data spesifik (jadwal, tarif, kamar, asuransi), arahkan pengguna ke Pusat Informasi RS di (021) 8065-0000 atau IGD 021-8065-9911. Jangan mengarang data.";
+
 // 5. Secure AI Dispatcher with AbortController Timeout (Always Route to Real AI)
 async function requestAICompletion(
   userQuery,
@@ -279,9 +288,15 @@ async function requestAICompletion(
   clientApiKey = "",
   voiceMode = false,
 ) {
+  // Prioritaskan cache pengetahuan lokal agar pertanyaan rumah sakit terjawab tanpa AI.
+  const localAnswer = checkInstantKnowledgeCache(userQuery);
+  if (localAnswer) {
+    return { text: localAnswer, source: "hospital-knowledge" };
+  }
+
   const systemPrompt = voiceMode
     ? `${HOSPITAL_ASSISTANT_PROMPT}\n\n${VOICE_CS_STYLE_INSTRUCTION}`
-    : `${HOSPITAL_ASSISTANT_PROMPT}\n\n${TEXT_CHAT_CONCISE_INSTRUCTION}`;
+    : `${CONDENSED_HOSPITAL_PROMPT}\n\n${TEXT_CHAT_CONCISE_INSTRUCTION}`;
 
   const messagesPayload = [
     { role: "system", content: systemPrompt },
@@ -427,11 +442,6 @@ async function requestAICompletion(
         console.warn(`Gemini (${geminiModel}) upstream error:`, err.message);
       }
     }
-  }
-
-  const localAnswer = checkInstantKnowledgeCache(userQuery);
-  if (localAnswer) {
-    return { text: localAnswer, source: "hospital-knowledge" };
   }
 
   // Graceful Fallback if APIs are offline or unconfigured
