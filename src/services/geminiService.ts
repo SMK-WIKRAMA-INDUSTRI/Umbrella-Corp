@@ -7,8 +7,8 @@ const hospitalKnowledgeLines = hospitalAssistantPrompt.systemPrompt.slice(
   knowledgeStart + 1,
   knowledgeEnd,
 );
-const normalizeKnowledgeText = (text: string) =>
-  text
+const normalizeKnowledgeText = (text: any) =>
+  String(text ?? '')
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')

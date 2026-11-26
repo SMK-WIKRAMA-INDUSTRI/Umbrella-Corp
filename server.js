@@ -11,15 +11,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalizeForIndonesianTTS } from "./normalizeForIndonesianTTS.js";
+import hospitalAssistantData from "./src/data/hospitalAssistantPrompt.json" with { type: "json" };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const HOSPITAL_ASSISTANT = JSON.parse(
-  fs.readFileSync(
-    path.join(__dirname, "src", "data", "hospitalAssistantPrompt.json"),
-    "utf-8",
-  ),
-);
+const HOSPITAL_ASSISTANT = hospitalAssistantData;
 const HOSPITAL_ASSISTANT_PROMPT = HOSPITAL_ASSISTANT.systemPrompt.join("\n");
 
 // 1. Zero-dependency .env loader for server-side secrets
@@ -121,7 +117,7 @@ const hospitalKnowledgeLines = HOSPITAL_ASSISTANT.systemPrompt.slice(
   knowledgeEnd,
 );
 const normalizeKnowledgeText = (text) =>
-  text
+  String(text ?? "")
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -464,7 +460,7 @@ const mimeTypes = {
   ".ico": "image/x-icon",
 };
 
-const server = http.createServer(async (req, res) => {
+async function requestHandler(req, res) {
   // Comprehensive Security Headers
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
@@ -956,12 +952,19 @@ const server = http.createServer(async (req, res) => {
   // Fallback for non-existent routes
   res.writeHead(404, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ error: "Not Found" }));
-});
+}
 
-server.listen(PORT, () => {
-  console.log(`\n=================================================`);
-  console.log(`  🏥 PT UMBRELLA CORP - SECURE AI BACKEND PROXY`);
-  console.log(`  🔒 Security: Rate Limiting & Anti-Path-Traversal ACTIVE`);
-  console.log(`  ⚡ Server listening on http://localhost:${PORT}`);
-  console.log(`=================================================\n`);
-});
+// Default export for Vercel serverless functions
+export default requestHandler;
+
+// Local/standalone server mode
+if (!process.env.VERCEL) {
+  const server = http.createServer(requestHandler);
+  server.listen(PORT, () => {
+    console.log(`\n=================================================`);
+    console.log(`  🏥 PT UMBRELLA CORP - SECURE AI BACKEND PROXY`);
+    console.log(`  🔒 Security: Rate Limiting & Anti-Path-Traversal ACTIVE`);
+    console.log(`  ⚡ Server listening on http://localhost:${PORT}`);
+    console.log(`=================================================\n`);
+  });
+}
