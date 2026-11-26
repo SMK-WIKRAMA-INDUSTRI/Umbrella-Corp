@@ -1183,7 +1183,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchAssistant }) =
                       className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs border border-emerald-700 flex items-center justify-center gap-2 transition-all"
                     >
                       <BedDouble className="w-3.5 h-3.5" />
-                      <span>Reservasi Kamar (Catat ke Database)</span>
+                      <span>Reservasi Kamar</span>
                     </button>
                   </div>
 
